@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IWM Institutional Positioning Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- SCANLINE OVERLAY -->
+  <div class="scanlines"></div>
+
+  <!-- HEADER -->
+  <header class="hdr">
+    <div class="hdr-left">
+      <span class="hdr-logo">⬡ INST<span class="accent">MAP</span></span>
+      <span class="hdr-sub">Institutional Positioning Intelligence</span>
+    </div>
+    <div class="hdr-center">
+      <div class="regime-badge" id="regimeBadge">
+        <span class="regime-dot"></span>
+        <span id="regimeLabel">LOADING REGIME…</span>
+      </div>
+    </div>
+    <div class="hdr-right">
+      <div class="ticker-input-wrap">
+        <label>TICKER</label>
+        <input id="tickerInput" type="text" value="IWM" maxlength="5" />
+        <button id="loadBtn">SCAN</button>
+      </div>
+      <div class="api-input-wrap">
+        <label>API KEY</label>
+        <input id="apiKeyInput" type="password" placeholder="Polygon.io key…" />
+      </div>
+      <div class="hdr-clock" id="clock">--:--:-- ET</div>
+      <div class="market-status" id="mktStatus">● CHECKING</div>
+    </div>
+  </header>
+
+  <!-- PLAYBOOK BANNER -->
+  <div class="playbook-banner" id="playbookBanner">
+    <div class="pb-item"><span class="pb-label">REGIME</span><span class="pb-val" id="pbRegime">--</span></div>
+    <div class="pb-divider">|</div>
+    <div class="pb-item"><span class="pb-label">DEALER BIAS</span><span class="pb-val" id="pbBias">--</span></div>
+    <div class="pb-divider">|</div>
+    <div class="pb-item"><span class="pb-label">GAMMA STATE</span><span class="pb-val" id="pbGamma">--</span></div>
+    <div class="pb-divider">|</div>
+    <div class="pb-item"><span class="pb-label">TARGET MAGNET</span><span class="pb-val accent" id="pbTarget">--</span></div>
+    <div class="pb-divider">|</div>
+    <div class="pb-item"><span class="pb-label">PLAYBOOK</span><span class="pb-val highlight" id="pbPlay">--</span></div>
+    <div class="pb-divider">|</div>
+    <div class="pb-item"><span class="pb-label">RISK</span><span class="pb-val" id="pbRisk">--</span></div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <main class="main-grid">
+
+    <!-- ═══ LAYER 1: REGIME ENGINE ═══ -->
+    <section class="panel layer1" id="layer1">
+      <div class="panel-hdr">
+        <span class="layer-num">L1</span>
+        <span class="panel-title">REGIME ENGINE</span>
+        <span class="panel-sub">Market Direction Filter</span>
+        <div class="panel-refresh" data-layer="1">↻</div>
+      </div>
+      <div class="regime-grid">
+        <div class="regime-card" id="rc-spy">
+          <div class="rc-ticker">SPY</div>
+          <div class="rc-price" id="spy-price">--</div>
+          <div class="rc-change" id="spy-chg">--</div>
+          <div class="rc-label">MARKET DIR</div>
+          <div class="rc-bar"><div class="rc-fill" id="spy-fill"></div></div>
+        </div>
+        <div class="regime-card" id="rc-qqq">
+          <div class="rc-ticker">QQQ</div>
+          <div class="rc-price" id="qqq-price">--</div>
+          <div class="rc-change" id="qqq-chg">--</div>
+          <div class="rc-label">TECH RISK</div>
+          <div class="rc-bar"><div class="rc-fill" id="qqq-fill"></div></div>
+        </div>
+        <div class="regime-card" id="rc-iwm">
+          <div class="rc-ticker">IWM</div>
+          <div class="rc-price" id="iwm-price">--</div>
+          <div class="rc-change" id="iwm-chg">--</div>
+          <div class="rc-label">RISK-ON</div>
+          <div class="rc-bar"><div class="rc-fill" id="iwm-fill"></div></div>
+        </div>
+        <div class="regime-card" id="rc-vix">
+          <div class="rc-ticker">VIX</div>
+          <div class="rc-price" id="vix-price">--</div>
+          <div class="rc-change" id="vix-chg">--</div>
+          <div class="rc-label">VOL REGIME</div>
+          <div class="rc-bar"><div class="rc-fill" id="vix-fill"></div></div>
+        </div>
+      </div>
+      <div class="day-type-row">
+        <div class="day-type-item active" id="dt-trend">TREND DAY</div>
+        <div class="day-type-item" id="dt-chop">CHOP DAY</div>
+        <div class="day-type-item" id="dt-pin">PIN DAY</div>
+        <div class="day-type-item" id="dt-expansion">EXPANSION DAY</div>
+        <div class="day-type-item" id="dt-hedge">HEDGE DAY</div>
+      </div>
+    </section>
+
+    <!-- ═══ LAYER 2: DEALER POSITIONING ENGINE ═══ -->
+    <section class="panel layer2" id="layer2">
+      <div class="panel-hdr">
+        <span class="layer-num">L2</span>
+        <span class="panel-title">DEALER POSITIONING</span>
+        <span class="panel-sub">OI Wall Map + Gamma Exposure</span>
+        <div class="panel-refresh" data-layer="2">↻</div>
+      </div>
+
+      <div class="dealer-top">
+        <div class="wall-stat">
+          <div class="ws-label">CALL WALL</div>
+          <div class="ws-val green" id="callWall">--</div>
+          <div class="ws-sub" id="callWallDist">-- away</div>
+        </div>
+        <div class="wall-stat">
+          <div class="ws-label">MAX PAIN</div>
+          <div class="ws-val yellow" id="maxPain">--</div>
+          <div class="ws-sub">DEALER EQUIL</div>
+        </div>
+        <div class="wall-stat">
+          <div class="ws-label">PUT WALL</div>
+          <div class="ws-val red" id="putWall">--</div>
+          <div class="ws-sub" id="putWallDist">-- away</div>
+        </div>
+        <div class="wall-stat">
+          <div class="ws-label">GAMMA FLIP</div>
+          <div class="ws-val cyan" id="gammaFlip">--</div>
+          <div class="ws-sub">IGNITION LVL</div>
+        </div>
+      </div>
+
+      <!-- OI WALL CHART -->
+      <div class="oi-chart-wrap">
+        <div class="oi-chart-label">OPEN INTEREST WALL MAP</div>
+        <div class="oi-chart" id="oiChart">
+          <div class="oi-loading">Loading OI data…</div>
+        </div>
+        <div class="oi-legend">
+          <span class="leg-item"><span class="leg-dot green"></span> Calls</span>
+          <span class="leg-item"><span class="leg-dot red"></span> Puts</span>
+          <span class="leg-item"><span class="leg-dot cyan"></span> Current Price</span>
+        </div>
+      </div>
+
+      <!-- GAMMA STAIRCASE -->
+      <div class="staircase-wrap">
+        <div class="sc-label">GAMMA STAIRCASE</div>
+        <div class="sc-row" id="staircaseRow">
+          <div class="sc-step loading">LOADING…</div>
+        </div>
+      </div>
+
+      <!-- GAMMA STATE -->
+      <div class="gamma-state-row">
+        <div class="gs-item">
+          <div class="gs-label">NET GAMMA EXPOSURE</div>
+          <div class="gs-val" id="netGamma">--</div>
+        </div>
+        <div class="gs-item">
+          <div class="gs-label">GAMMA STATE</div>
+          <div class="gs-val" id="gammaState">--</div>
+        </div>
+        <div class="gs-item">
+          <div class="gs-label">DIST TO CALL WALL</div>
+          <div class="gs-val green" id="distCallWall">--</div>
+        </div>
+        <div class="gs-item">
+          <div class="gs-label">ROOM TO RUN</div>
+          <div class="gs-val" id="roomToRun">--</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ LAYER 3: FLOW ENGINE ═══ -->
+    <section class="panel layer3" id="layer3">
+      <div class="panel-hdr">
+        <span class="layer-num">L3</span>
+        <span class="panel-title">FLOW ENGINE</span>
+        <span class="panel-sub">Options Volume + Sweep Activity</span>
+        <div class="panel-refresh" data-layer="3">↻</div>
+      </div>
+
+      <div class="flow-stats">
+        <div class="flow-stat">
+          <div class="fs-label">CALL VOLUME</div>
+          <div class="fs-val green" id="callVol">--</div>
+        </div>
+        <div class="flow-stat">
+          <div class="fs-label">PUT VOLUME</div>
+          <div class="fs-val red" id="putVol">--</div>
+        </div>
+        <div class="flow-stat">
+          <div class="fs-label">P/C RATIO</div>
+          <div class="fs-val" id="pcRatio">--</div>
+        </div>
+        <div class="flow-stat">
+          <div class="fs-label">FLOW SIGNAL</div>
+          <div class="fs-val highlight" id="flowSignal">--</div>
+        </div>
+      </div>
+
+      <!-- FLOW TABLE -->
+      <div class="flow-table-wrap">
+        <div class="ft-hdr-row">
+          <span>STRIKE</span><span>TYPE</span><span>EXP</span><span>OI</span><span>VOL</span><span>IV</span><span>SIGNAL</span>
+        </div>
+        <div class="flow-table-body" id="flowTable">
+          <div class="ft-loading">Scanning option flow…</div>
+        </div>
+      </div>
+
+      <!-- FLOW BAR -->
+      <div class="flow-bar-wrap">
+        <div class="fb-label">CALL/PUT FLOW BALANCE</div>
+        <div class="flow-bar">
+          <div class="fb-calls" id="fbCalls" style="width:50%">CALLS</div>
+          <div class="fb-puts" id="fbPuts" style="width:50%">PUTS</div>
+        </div>
+        <div class="fb-vals">
+          <span id="fbCallPct">50%</span>
+          <span id="fbPutPct">50%</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ LAYER 4: STRUCTURE ENGINE ═══ -->
+    <section class="panel layer4" id="layer4">
+      <div class="panel-hdr">
+        <span class="layer-num">L4</span>
+        <span class="panel-title">STRUCTURE ENGINE</span>
+        <span class="panel-sub">Price Levels + VWAP + EMA</span>
+        <div class="panel-refresh" data-layer="4">↻</div>
+      </div>
+
+      <div class="struct-top">
+        <div class="struct-price-block">
+          <div class="spb-label">CURRENT PRICE</div>
+          <div class="spb-price" id="structPrice">--</div>
+          <div class="spb-change" id="structChange">-- | --%</div>
+        </div>
+        <div class="struct-bias">
+          <div class="sb-label">PRICE BIAS</div>
+          <div class="sb-val" id="structBias">--</div>
+        </div>
+      </div>
+
+      <!-- LEVEL STACK -->
+      <div class="level-stack" id="levelStack">
+        <div class="ls-loading">Loading structure levels…</div>
+      </div>
+
+      <!-- TECHNICAL INDICATORS -->
+      <div class="tech-indicators">
+        <div class="ti-row">
+          <div class="ti-item">
+            <div class="ti-label">EMA 20</div>
+            <div class="ti-val" id="ema20">--</div>
+            <div class="ti-rel" id="ema20rel">--</div>
+          </div>
+          <div class="ti-item">
+            <div class="ti-label">EMA 50</div>
+            <div class="ti-val" id="ema50">--</div>
+            <div class="ti-rel" id="ema50rel">--</div>
+          </div>
+          <div class="ti-item">
+            <div class="ti-label">RSI (14)</div>
+            <div class="ti-val" id="rsi14">--</div>
+            <div class="ti-rel" id="rsiSignal">--</div>
+          </div>
+          <div class="ti-item">
+            <div class="ti-label">MACD</div>
+            <div class="ti-val" id="macdVal">--</div>
+            <div class="ti-rel" id="macdSignal">--</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KEY LEVELS TABLE -->
+      <div class="key-levels-wrap">
+        <div class="kl-title">KEY STRUCTURE LEVELS</div>
+        <div class="kl-grid" id="keyLevelsGrid">
+          <div class="kl-row header"><span>LEVEL</span><span>PRICE</span><span>TYPE</span><span>STATUS</span></div>
+          <div class="kl-row" id="kl-pwh"><span>PREV WEEK HIGH</span><span id="klPWH">--</span><span class="res">RESISTANCE</span><span id="klPWHs">--</span></div>
+          <div class="kl-row" id="kl-pdh"><span>PREV DAY HIGH</span><span id="klPDH">--</span><span class="res">RESISTANCE</span><span id="klPDHs">--</span></div>
+          <div class="kl-row" id="kl-cur"><span>▶ CURRENT</span><span id="klCUR" class="accent">--</span><span>--</span><span>--</span></div>
+          <div class="kl-row" id="kl-pdl"><span>PREV DAY LOW</span><span id="klPDL">--</span><span class="sup">SUPPORT</span><span id="klPDLs">--</span></div>
+          <div class="kl-row" id="kl-pwl"><span>PREV WEEK LOW</span><span id="klPWL">--</span><span class="sup">SUPPORT</span><span id="klPWLs">--</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ LAYER 5: PLAYBOOK ENGINE ═══ -->
+    <section class="panel layer5" id="layer5">
+      <div class="panel-hdr">
+        <span class="layer-num">L5</span>
+        <span class="panel-title">PLAYBOOK ENGINE</span>
+        <span class="panel-sub">Setup Classification + Probability Map</span>
+        <div class="panel-refresh" data-layer="5">↻</div>
+      </div>
+
+      <!-- ACTIVE SETUP CARD -->
+      <div class="active-setup" id="activeSetup">
+        <div class="as-glow"></div>
+        <div class="as-label">ACTIVE SETUP</div>
+        <div class="as-name" id="asName">SCANNING…</div>
+        <div class="as-desc" id="asDesc">Analyzing confluence layers…</div>
+        <div class="as-confidence">
+          <span class="asc-label">CONFLUENCE SCORE</span>
+          <div class="asc-bar">
+            <div class="asc-fill" id="ascFill" style="width:0%"></div>
+          </div>
+          <span class="asc-pct" id="ascPct">0%</span>
+        </div>
+      </div>
+
+      <!-- PLAYBOOK CARDS -->
+      <div class="playbook-grid">
+        <div class="pb-card" id="pbc-firecracker" title="Cheap expansion play">
+          <div class="pbc-icon">🔥</div>
+          <div class="pbc-name">FIRECRACKER</div>
+          <div class="pbc-sub">Cheap Expansion</div>
+          <div class="pbc-status" id="pbs-firecracker">--</div>
+        </div>
+        <div class="pb-card" id="pbc-trifecta" title="Multi-layer confluence">
+          <div class="pbc-icon">⬡</div>
+          <div class="pbc-name">TRIFECTA</div>
+          <div class="pbc-sub">Multi-Layer</div>
+          <div class="pbc-status" id="pbs-trifecta">--</div>
+        </div>
+        <div class="pb-card" id="pbc-magnet" title="Price moving toward wall">
+          <div class="pbc-icon">⚡</div>
+          <div class="pbc-name">MAGNET RUN</div>
+          <div class="pbc-sub">Wall Attraction</div>
+          <div class="pbc-status" id="pbs-magnet">--</div>
+        </div>
+        <div class="pb-card" id="pbc-pin" title="Chop expected near max pain">
+          <div class="pbc-icon">📍</div>
+          <div class="pbc-name">PIN RISK</div>
+          <div class="pbc-sub">Chop Expected</div>
+          <div class="pbc-status" id="pbs-pin">--</div>
+        </div>
+        <div class="pb-card" id="pbc-gamma" title="Trend acceleration">
+          <div class="pbc-icon">↑</div>
+          <div class="pbc-name">GAMMA EXP</div>
+          <div class="pbc-sub">Acceleration</div>
+          <div class="pbc-status" id="pbs-gamma">--</div>
+        </div>
+        <div class="pb-card" id="pbc-cascade" title="Fast move potential">
+          <div class="pbc-icon">⛓</div>
+          <div class="pbc-name">CASCADE</div>
+          <div class="pbc-sub">Fast Move</div>
+          <div class="pbc-status" id="pbs-cascade">--</div>
+        </div>
+      </div>
+
+      <!-- PROBABILITY MAP -->
+      <div class="prob-map">
+        <div class="pm-title">PROBABILITY MAP</div>
+        <div class="pm-scenarios">
+          <div class="pm-scenario bull">
+            <div class="pm-s-label">▲ BULL SCENARIO</div>
+            <div class="pm-s-path" id="pmBullPath">-- → -- → --</div>
+            <div class="pm-s-cond" id="pmBullCond">Loading conditions…</div>
+            <div class="pm-s-prob">
+              <div class="pm-s-bar">
+                <div class="pm-s-fill bull-fill" id="pmBullFill" style="width:50%"></div>
+              </div>
+              <span id="pmBullPct">50%</span>
+            </div>
+          </div>
+          <div class="pm-scenario bear">
+            <div class="pm-s-label">▼ BEAR SCENARIO</div>
+            <div class="pm-s-path" id="pmBearPath">-- → -- → --</div>
+            <div class="pm-s-cond" id="pmBearCond">Loading conditions…</div>
+            <div class="pm-s-prob">
+              <div class="pm-s-bar">
+                <div class="pm-s-fill bear-fill" id="pmBearFill" style="width:50%"></div>
+              </div>
+              <span id="pmBearPct">50%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ALERT LOG -->
+      <div class="alert-log-wrap">
+        <div class="al-title">SIGNAL LOG</div>
+        <div class="alert-log" id="alertLog">
+          <div class="al-entry init">Dashboard initialized. Enter API key and click SCAN.</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="dash-footer">
+    <span>INSTMAP v2.0 · Polygon.io Data · Not financial advice · For educational use only</span>
+    <span id="lastUpdate">Last update: --</span>
+    <span>Auto-refresh: <span id="refreshCountdown">--</span>s</span>
+  </footer>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>
