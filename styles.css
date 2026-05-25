@@ -493,9 +493,16 @@ input:focus { border-color: var(--accent); }
 }
 .ls-loading { color: var(--text3); font-size: 11px; }
 .ls-level {
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: 6px;
   padding: 4px 0; border-bottom: 1px solid var(--border);
 }
+.ls-level.current-level {
+  background: rgba(0,212,255,0.06);
+  border-left: 2px solid var(--accent);
+  padding-left: 4px;
+}
+.ls-dist.green { color: var(--green) !important; }
+.ls-dist.red   { color: var(--red)   !important; }
 .ls-level:last-child { border-bottom: none; }
 .ls-badge {
   width: 60px; text-align: center;
@@ -726,21 +733,39 @@ input:focus { border-color: var(--accent); }
 }
 .ws-status.connected { color: var(--green); border-color: var(--green); }
 
-/* FIX: L2 right side was blank — ensure layer2 fills its grid rows */
-.layer2 {
-  min-height: 600px;
+/* MAX PAIN LINE on OI chart */
+.oi-pain-line {
+  position: absolute; bottom: 24px; top: 8px;
+  width: 1px; background: var(--yellow);
+  box-shadow: 0 0 4px var(--yellow);
+  z-index: 4; border-left: 1px dashed var(--yellow);
 }
 
-/* CURRENT LEVEL HIGHLIGHT */
-.ls-level.current-level {
-  background: rgba(0,212,255,0.06);
-  border-left: 2px solid var(--accent);
-  padding-left: 6px;
+/* WALL HIGHLIGHT on OI bars */
+.oi-bar.call.wall { opacity: 1 !important; box-shadow: 0 0 8px var(--green); }
+.oi-bar.put.wall  { opacity: 1 !important; box-shadow: 0 0 8px var(--red); }
+
+/* STAIRCASE % labels */
+.sc-pct { display: block; font-size: 7px; color: var(--green); font-family: var(--font-mono); }
+
+/* LEVEL STACK tag column */
+.ls-tag {
+  width: 36px; font-size: 7px; color: var(--text3);
+  letter-spacing: 1px; text-align: center;
+  background: rgba(0,0,0,0.2);
+  padding: 1px 3px; border-radius: 1px;
+  align-self: center;
 }
 
-/* DIST COLORS in level stack */
-.ls-dist.green { color: var(--green) !important; }
-.ls-dist.red   { color: var(--red)   !important; }
+/* KEY badge type for max pain */
+.ls-badge.key { background: rgba(255,215,0,0.15); color: var(--yellow); border: 1px solid var(--yellow); }
+
+/* SCORE color transitions */
+#ascPct { transition: color .4s; }
+
+/* FIX: prevent L4 right column gap */
+.layer4 { min-height: 0; }
+.layer5 { min-height: 0; }
 
 /* ── RESPONSIVE ── */
 @media (max-width: 1200px) {
