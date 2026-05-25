@@ -718,7 +718,31 @@ input:focus { border-color: var(--accent); }
 }
 .ft-row, .ls-level, .kl-row { animation: fadeIn .3s ease; }
 
-/* RESPONSIVE */
+/* WEBSOCKET STATUS */
+.ws-status {
+  font-size: 9px; letter-spacing: 2px;
+  color: var(--text3); padding: 4px 8px;
+  border: 1px solid var(--border);
+}
+.ws-status.connected { color: var(--green); border-color: var(--green); }
+
+/* FIX: L2 right side was blank — ensure layer2 fills its grid rows */
+.layer2 {
+  min-height: 600px;
+}
+
+/* CURRENT LEVEL HIGHLIGHT */
+.ls-level.current-level {
+  background: rgba(0,212,255,0.06);
+  border-left: 2px solid var(--accent);
+  padding-left: 6px;
+}
+
+/* DIST COLORS in level stack */
+.ls-dist.green { color: var(--green) !important; }
+.ls-dist.red   { color: var(--red)   !important; }
+
+/* ── RESPONSIVE ── */
 @media (max-width: 1200px) {
   .main-grid {
     grid-template-columns: 1fr;

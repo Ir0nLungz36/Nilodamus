@@ -36,6 +36,8 @@
         <input id="apiKeyInput" type="password" placeholder="Polygon.io key…" />
       </div>
       <div class="hdr-clock" id="clock">--:--:-- ET</div>
+      <div class="ws-status" id="wsStatus">◎ WS OFF</div>
+      <div id="wsLive" style="width:6px;height:6px;border-radius:50%;background:var(--green);opacity:0.3;transition:opacity .2s;"></div>
       <div class="market-status" id="mktStatus">● CHECKING</div>
     </div>
   </header>
@@ -198,12 +200,32 @@
           <div class="fs-val red" id="putVol">--</div>
         </div>
         <div class="flow-stat">
-          <div class="fs-label">P/C RATIO</div>
+          <div class="fs-label">VOL P/C RATIO</div>
           <div class="fs-val" id="pcRatio">--</div>
         </div>
         <div class="flow-stat">
           <div class="fs-label">FLOW SIGNAL</div>
           <div class="fs-val highlight" id="flowSignal">--</div>
+        </div>
+      </div>
+
+      <!-- OI TOTALS ROW -->
+      <div class="flow-stats" style="margin-top:-4px;">
+        <div class="flow-stat">
+          <div class="fs-label">CALL OI TOTAL</div>
+          <div class="fs-val green" id="totalCallOI" style="font-size:13px">--</div>
+        </div>
+        <div class="flow-stat">
+          <div class="fs-label">PUT OI TOTAL</div>
+          <div class="fs-val red" id="totalPutOI" style="font-size:13px">--</div>
+        </div>
+        <div class="flow-stat">
+          <div class="fs-label">OI P/C RATIO</div>
+          <div class="fs-val" id="oiPCRatio" style="font-size:13px">--</div>
+        </div>
+        <div class="flow-stat">
+          <div class="fs-label">NEAREST EXP</div>
+          <div class="fs-val cyan" id="nearestExp" style="font-size:11px">--</div>
         </div>
       </div>
 
