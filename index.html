@@ -155,9 +155,13 @@
 
       <!-- GAMMA STAIRCASE -->
       <div class="staircase-wrap">
-        <div class="sc-label">GAMMA STAIRCASE</div>
+        <div class="sc-label">▲ CALL STAIRCASE <span style="color:var(--text3);font-size:8px;">upside acceleration ladder</span></div>
         <div class="sc-row" id="staircaseRow">
           <div class="sc-step loading">LOADING…</div>
+        </div>
+        <div class="sc-label" style="margin-top:6px;">▼ PUT STAIRCASE <span style="color:var(--text3);font-size:8px;">downside support levels</span></div>
+        <div class="sc-row" id="putStaircaseRow">
+          <div class="sc-step put-step loading">LOADING…</div>
         </div>
       </div>
 
@@ -179,6 +183,12 @@
           <div class="gs-label">ROOM TO RUN</div>
           <div class="gs-val" id="roomToRun">--</div>
         </div>
+      </div>
+
+      <!-- IV SKEW -->
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:8px;color:var(--text3);letter-spacing:2px;">IV SKEW</span>
+        <span class="skew-badge neutral" id="ivSkewBadge">CALCULATING…</span>
       </div>
     </section>
 
@@ -299,8 +309,9 @@
             <div class="ti-rel" id="rsiSignal">--</div>
           </div>
           <div class="ti-item">
-            <div class="ti-label">MACD</div>
+            <div class="ti-label">MACD HIST</div>
             <div class="ti-val" id="macdVal">--</div>
+            <div class="ti-sub-val" id="macdLine" style="font-size:9px;color:var(--text3);margin-top:1px;">--</div>
             <div class="ti-rel" id="macdSignal">--</div>
           </div>
         </div>
@@ -311,11 +322,11 @@
         <div class="kl-title">KEY STRUCTURE LEVELS</div>
         <div class="kl-grid" id="keyLevelsGrid">
           <div class="kl-row header"><span>LEVEL</span><span>PRICE</span><span>TYPE</span><span>STATUS</span></div>
-          <div class="kl-row" id="kl-pwh"><span>PREV WEEK HIGH</span><span id="klPWH">--</span><span class="res">RESISTANCE</span><span id="klPWHs">--</span></div>
+          <div class="kl-row" id="kl-pwh"><span>MAX PAIN / γ</span><span id="klPWH">--</span><span class="yellow" style="color:var(--yellow)">KEY LEVEL</span><span id="klPWHs">--</span></div>
           <div class="kl-row" id="kl-pdh"><span>PREV DAY HIGH</span><span id="klPDH">--</span><span class="res">RESISTANCE</span><span id="klPDHs">--</span></div>
           <div class="kl-row" id="kl-cur"><span>▶ CURRENT</span><span id="klCUR" class="accent">--</span><span>--</span><span>--</span></div>
           <div class="kl-row" id="kl-pdl"><span>PREV DAY LOW</span><span id="klPDL">--</span><span class="sup">SUPPORT</span><span id="klPDLs">--</span></div>
-          <div class="kl-row" id="kl-pwl"><span>PREV WEEK LOW</span><span id="klPWL">--</span><span class="sup">SUPPORT</span><span id="klPWLs">--</span></div>
+          <div class="kl-row" id="kl-pwl"><span>PUT WALL / OI</span><span id="klPWL">--</span><span class="sup">OI SUPPORT</span><span id="klPWLs">--</span></div>
         </div>
       </div>
     </section>
@@ -415,20 +426,27 @@
 
       <!-- ALERT LOG -->
       <div class="alert-log-wrap">
-        <div class="al-title">SIGNAL LOG</div>
-        <div class="alert-log" id="alertLog">
-          <div class="al-entry init">Dashboard initialized. Enter API key and click SCAN.</div>
+        <div class="al-title">SIGNAL LOG <span style="color:var(--text3);font-weight:400;">— last 60 events</span></div>
+        <div class="alert-log" id="alertLog" style="max-height:140px;">
+          <div class="al-entry init">INSTMAP v2.3 ready. Enter API key and click SCAN.</div>
         </div>
       </div>
     </section>
 
   </main>
 
+  <!-- MARKET CLOSED SESSION NOTICE -->
+  <div class="session-notice" id="sessionNotice" style="display:none;">
+    <span>⚠ MARKET CLOSED</span>
+    <span>Displaying previous session data — option chain OI is current, prices are prev close</span>
+  </div>
+
   <!-- FOOTER -->
   <footer class="dash-footer">
-    <span>INSTMAP v2.0 · Polygon.io Data · Not financial advice · For educational use only</span>
+    <span>INSTMAP v2.3 · Polygon.io Options Plan · Not financial advice · Educational use only</span>
     <span id="lastUpdate">Last update: --</span>
-    <span>Auto-refresh: <span id="refreshCountdown">--</span>s</span>
+    <span id="apiCounter" style="color:var(--text3);font-size:9px;">API calls: 0</span>
+    <span>Refresh: <span id="refreshCountdown">--</span>s</span>
   </footer>
 
   <script src="dashboard.js"></script>

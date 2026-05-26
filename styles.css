@@ -767,6 +767,84 @@ input:focus { border-color: var(--accent); }
 .layer4 { min-height: 0; }
 .layer5 { min-height: 0; }
 
+/* SESSION NOTICE BAR */
+.session-notice {
+  display: flex; align-items: center; justify-content: center; gap: 16px;
+  background: rgba(255,215,0,0.06);
+  border-top: 1px solid rgba(255,215,0,0.25);
+  border-bottom: 1px solid rgba(255,215,0,0.25);
+  padding: 5px 20px;
+  font-size: 10px; letter-spacing: 2px; color: var(--yellow);
+}
+.session-notice span:first-child { font-family: var(--font-display); font-weight: 700; font-size: 9px; }
+
+/* IV SKEW BADGE */
+.skew-badge { font-size: 8px; letter-spacing: 1px; padding: 2px 8px; border-radius: 1px; }
+.skew-badge.bull    { color:var(--green);  background:rgba(0,255,136,0.1); border:1px solid var(--green); }
+.skew-badge.bear    { color:var(--red);    background:rgba(255,51,85,0.1);  border:1px solid var(--red); }
+.skew-badge.neutral { color:var(--text3);  background:transparent;          border:1px solid var(--border2); }
+
+/* FLOW TABLE — alert rows flash on sweep/block */
+.ft-row.ft-alert      { background: rgba(255,107,53,0.07) !important; }
+.ft-row.ft-alert-call { border-left: 2px solid var(--green); padding-left: 4px; }
+.ft-row.ft-alert-put  { border-left: 2px solid var(--red);   padding-left: 4px; }
+.ft-row.ft-alert { animation: rowPulse 2.5s ease-out 1; }
+@keyframes rowPulse { 0%{background:rgba(255,107,53,0.3)} 100%{background:rgba(255,107,53,0.07)} }
+
+/* PUT STAIRCASE */
+.sc-step.put-step { border-color: var(--red); color: var(--red); }
+.sc-step.put-step.active { background: rgba(255,51,85,0.1); }
+.sc-pct.red { color: var(--red) !important; }
+
+/* OI BAR min/max width for any screen size */
+.oi-bar-group { min-width: 12px; max-width: 44px; }
+
+/* ROOM TO RUN dynamic colors */
+.gs-val.green  { color: var(--green)  !important; }
+.gs-val.yellow { color: var(--yellow) !important; }
+.gs-val.red    { color: var(--red)    !important; }
+
+/* RISK banner value colors */
+.pb-val.red   { color: var(--red)   !important; }
+.pb-val.green { color: var(--green) !important; }
+
+/* REGIME card change line compact */
+.rc-change { font-size: 9px; line-height: 1.5; }
+
+/* API COUNTER */
+#apiCounter { transition: color .3s; }
+
+/* ── FINAL POLISH v2.3 ── */
+
+/* Put staircase */
+.sc-step.put-step { border-color: var(--red); color: var(--red); }
+.sc-step.put-step.active { background: rgba(255,51,85,0.1); box-shadow: 0 0 8px rgba(255,51,85,0.2); }
+.sc-pct.red { color: var(--red) !important; }
+
+/* MACD sub-line */
+.ti-sub-val { font-size: 9px; color: var(--text3); margin-top: 1px; font-family: var(--font-mono); }
+
+/* Dynamic color transitions */
+#rsi14  { transition: color .4s; }
+#macdVal{ transition: color .4s; }
+#ascPct { transition: color .4s; }
+
+/* Current level highlight */
+.ls-level.current-level { background: rgba(0,212,255,0.06); border-left: 2px solid var(--accent); padding-left: 4px; }
+.ls-dist.green { color: var(--green) !important; }
+.ls-dist.red   { color: var(--red)   !important; }
+
+/* Banner risk colors */
+.pb-val.red    { color: var(--red)    !important; }
+.pb-val.yellow { color: var(--yellow) !important; }
+.pb-val.green  { color: var(--green)  !important; }
+
+/* Put wall distance */
+#putWallDist { color: var(--red); }
+
+/* L2 min height */
+.layer2 { min-height: 580px; }
+
 /* ── RESPONSIVE ── */
 @media (max-width: 1200px) {
   .main-grid {
