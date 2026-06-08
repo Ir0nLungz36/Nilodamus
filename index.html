@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Massive ADR Expansion + Relative Strength</title>
+  <title>Expansion + Relative Strength Engine</title>
   <style>
     body { background:#07080b; color:white; font-family:Arial; padding:24px; }
     input, select, button { padding:10px; border-radius:8px; border:1px solid #333; margin:4px; }
@@ -21,7 +21,7 @@
 
 <body>
 
-<h1>Massive ADR Expansion + Relative Strength Dashboard</h1>
+<h1>Expansion + Relative Strength Engine</h1>
 
 <div class="card">
   <h2>Inputs</h2>
@@ -33,10 +33,9 @@
     <option value="XLK">XLK - Technology</option>
     <option value="SOXX">SOXX - Semiconductors</option>
     <option value="IWM">IWM - Small Caps</option>
-    <option value="XLE">XLE - Energy</option>
-    <option value="XLF">XLF - Financials</option>
   </select>
-  <button onclick="saveAndRun()">Run Expansion Scan</button>
+  <input id="manualAdrInput" type="number" step="0.01" placeholder="Manual ADR20 if needed">
+  <button onclick="saveAndRun()">Run Scan</button>
   <button onclick="clearInputs()">Clear</button>
   <p id="status" class="muted">Waiting...</p>
 </div>
@@ -62,19 +61,21 @@
 let API_KEY = localStorage.getItem("MASSIVE_API_KEY") || "";
 let LAST_SYMBOL = localStorage.getItem("EXPANSION_SYMBOL") || "";
 let LAST_BENCHMARK = localStorage.getItem("EXPANSION_BENCHMARK") || "QQQ";
+let LAST_MANUAL_ADR = localStorage.getItem("MANUAL_ADR20") || "";
 
 document.getElementById("apiKeyInput").value = API_KEY;
 document.getElementById("symbolInput").value = LAST_SYMBOL;
 document.getElementById("benchmarkInput").value = LAST_BENCHMARK;
+document.getElementById("manualAdrInput").value = LAST_MANUAL_ADR;
 
 function setStatus(msg){ document.getElementById("status").innerText = msg; }
 function setError(msg){ document.getElementById("errors").innerText = msg || "None"; }
-function sleep(ms){ return new Promise(resolve => setTimeout(resolve, ms)); }
 
 function saveAndRun() {
   API_KEY = document.getElementById("apiKeyInput").value.trim();
   const symbol = document.getElementById("symbolInput").value.trim().toUpperCase();
   const benchmark = document.getElementById("benchmarkInput").value;
+  const manualAdr = document.getElementById("manualAdrInput").value.trim();
 
   if (!API_KEY) return setStatus("Paste your Massive API key first.");
   if (!symbol) return setStatus("Enter a symbol first.");
@@ -82,28 +83,92 @@ function saveAndRun() {
   localStorage.setItem("MASSIVE_API_KEY", API_KEY);
   localStorage.setItem("EXPANSION_SYMBOL", symbol);
   localStorage.setItem("EXPANSION_BENCHMARK", benchmark);
+  localStorage.setItem("MANUAL_ADR20", manualAdr);
 
-  run(symbol, benchmark);
+  run(symbol, benchmark, manualAdr);
 }
 
 function clearInputs() {
   localStorage.removeItem("EXPANSION_SYMBOL");
+  localStorage.removeItem("MANUAL_ADR20");
   document.getElementById("symbolInput").value = "";
-  setStatus("Symbol cleared.");
+  document.getElementById("manualAdrInput").value = "";
+  setStatus("Inputs cleared.");
 }
 
 async function massive(url) {
   const joiner = url.includes("?") ? "&" : "?";
   const fullUrl = `${url}${joiner}apiKey=${encodeURIComponent(API_KEY)}`;
-
   const r = await fetch(fullUrl);
   const data = await r.json();
 
-  if (!r.ok || data.status === "ERROR" || data.status === "NOT_AUTHORIZED") {
+  if (!r.ok || data.status === "ERROR" || data.status === "NOT_AUTHORIZED" || data.error) {
     throw new Error(JSON.stringify(data, null, 2));
   }
 
   return data;
+}
+
+async function getUnifiedSnapshot(symbol, benchmark) {
+  const url = `https://api.massive.com/v3/snapshot?ticker.any_of=${symbol},${benchmark}&market=stocks`;
+  const data = await massive(url);
+  return data.results || [];
+}
+
+function readSnapshot(item) {
+  const ticker = item.ticker || item.symbol;
+
+  const price =
+    item.session?.price ??
+    item.session?.close ??
+    item.day?.c ??
+    item.day?.close ??
+    item.min?.c ??
+    item.prevDay?.c ??
+    0;
+
+  const prevClose =
+    item.prevDay?.c ??
+    item.previousClose ??
+    0;
+
+  let changePercent =
+    item.todaysChangePerc ??
+    item.session?.change_percent ??
+    item.session?.changePercent ??
+    0;
+
+  if (!changePercent && price && prevClose) {
+    changePercent = ((price - prevClose) / prevClose) * 100;
+  }
+
+  const high =
+    item.day?.h ??
+    item.session?.high ??
+    item.min?.h ??
+    0;
+
+  const low =
+    item.day?.l ??
+    item.session?.low ??
+    item.min?.l ??
+    0;
+
+  const volume =
+    item.day?.v ??
+    item.session?.volume ??
+    item.min?.v ??
+    0;
+
+  return {
+    ticker,
+    price,
+    prevClose,
+    changePercent,
+    high,
+    low,
+    volume
+  };
 }
 
 function dateNDaysAgo(days) {
@@ -115,8 +180,8 @@ function todayISO() {
   return new Date().toISOString().slice(0,10);
 }
 
-async function massiveDailyBars(symbol, daysBack=100) {
-  const from = dateNDaysAgo(daysBack);
+async function tryGetAdr20(symbol) {
+  const from = dateNDaysAgo(90);
   const to = todayISO();
 
   const url =
@@ -124,40 +189,15 @@ async function massiveDailyBars(symbol, daysBack=100) {
 
   const data = await massive(url);
 
-  if (!data.results || !data.results.length) {
-    throw new Error(`${symbol} bars error: ${JSON.stringify(data, null, 2)}`);
+  if (!data.results || data.results.length < 20) {
+    throw new Error(`${symbol} ADR bars unavailable.`);
   }
 
-  return data.results.map(b => ({
-    time: b.t,
-    open: b.o,
-    high: b.h,
-    low: b.l,
-    close: b.c,
-    volume: b.v
-  }));
-}
+  const recent = data.results.slice(-20);
+  const ranges = recent.map(b => ((b.h - b.l) / b.c) * 100);
+  const adr = ranges.reduce((a,b) => a + b, 0) / ranges.length;
 
-function average(arr) {
-  if (!arr.length) return 0;
-  return arr.reduce((a,b) => a + b, 0) / arr.length;
-}
-
-function adr20(bars) {
-  const recent = bars.slice(-20);
-  const ranges = recent.map(b => ((b.high - b.low) / b.close) * 100);
-  return average(ranges);
-}
-
-function avgVolume20(bars) {
-  return average(bars.slice(-20).map(b => b.volume || 0));
-}
-
-function changeOverBars(bars, lookback) {
-  if (bars.length <= lookback) return 0;
-  const current = bars[bars.length - 1].close;
-  const past = bars[bars.length - 1 - lookback].close;
-  return ((current - past) / past) * 100;
+  return adr;
 }
 
 function scoreADR(adr) {
@@ -182,14 +222,6 @@ function scoreDollarVol(dollarVol) {
   if (dollarVol >= 500_000_000) return 70;
   if (dollarVol >= 100_000_000) return 50;
   return 20;
-}
-
-function scoreRVOL(rvol) {
-  if (rvol >= 3) return 100;
-  if (rvol >= 2) return 85;
-  if (rvol >= 1.5) return 70;
-  if (rvol >= 1) return 50;
-  return 25;
 }
 
 function scoreRS(stockChange, benchmarkChange) {
@@ -221,56 +253,55 @@ function formatLarge(num) {
   return `$${num.toFixed(0)}`;
 }
 
-async function run(symbol, benchmark) {
+async function run(symbol, benchmark, manualAdr) {
   try {
     setError("");
-    setStatus(`Loading ${symbol} Massive daily bars...`);
+    setStatus(`Loading ${symbol} + ${benchmark} snapshot...`);
 
-    const bars = await massiveDailyBars(symbol);
-    await sleep(700);
+    const snapshots = await getUnifiedSnapshot(symbol, benchmark);
+    const parsed = snapshots.map(readSnapshot);
 
-    setStatus(`Loading ${benchmark} benchmark bars...`);
-    const benchBars = await massiveDailyBars(benchmark);
+    const stock = parsed.find(x => x.ticker === symbol);
+    const bench = parsed.find(x => x.ticker === benchmark);
 
-    const last = bars[bars.length - 1];
-    const prev = bars[bars.length - 2];
+    if (!stock) throw new Error(`No snapshot returned for ${symbol}`);
+    if (!bench) throw new Error(`No snapshot returned for ${benchmark}`);
 
-    const adr = adr20(bars);
-    const todayRange = ((last.high - last.low) / last.close) * 100;
+    let adrSource = "Massive Stock Aggregates";
+    let adr = 0;
+    let adrWarning = "";
+
+    try {
+      adr = await tryGetAdr20(symbol);
+    } catch (e) {
+      adrSource = "Manual ADR20";
+      adr = parseFloat(manualAdr || 0);
+
+      if (!adr) {
+        throw new Error(
+          `ADR20 unavailable from Massive stock aggregates. Your plan likely lacks stock aggregate access. Enter Manual ADR20 to continue.\n\nOriginal error:\n${e.message}`
+        );
+      }
+
+      adrWarning = "Massive blocked stock aggregate bars, so manual ADR20 was used.";
+    }
+
+    const todayRange = stock.price && stock.high && stock.low
+      ? ((stock.high - stock.low) / stock.price) * 100
+      : 0;
+
     const expansionUsed = adr ? (todayRange / adr) * 100 : 0;
-
-    const avgVol = avgVolume20(bars);
-    const latestVol = last.volume || 0;
-    const rvol = avgVol ? latestVol / avgVol : 0;
-    const dollarVol = last.close * latestVol;
-
-    const dayChange = prev ? ((last.close - prev.close) / prev.close) * 100 : 0;
-
-    const stock5d = changeOverBars(bars, 5);
-    const stock20d = changeOverBars(bars, 20);
-    const bench5d = changeOverBars(benchBars, 5);
-    const bench20d = changeOverBars(benchBars, 20);
-
-    const rs5Spread = stock5d - bench5d;
-    const rs20Spread = stock20d - bench20d;
+    const dollarVol = stock.price * stock.volume;
 
     const adrScore = scoreADR(adr);
     const expansionRoomScore = scoreExpansionUsed(expansionUsed);
     const dollarVolScore = scoreDollarVol(dollarVol);
-    const rvolScore = scoreRVOL(rvol);
-    const rs5Score = scoreRS(stock5d, bench5d);
-    const rs20Score = scoreRS(stock20d, bench20d);
+    const rsScore = scoreRS(stock.changePercent, bench.changePercent);
 
     const expansionScore = Math.round(
-      adrScore * 0.35 +
-      expansionRoomScore * 0.30 +
-      dollarVolScore * 0.20 +
-      rvolScore * 0.15
-    );
-
-    const rsScore = Math.round(
-      rs5Score * 0.60 +
-      rs20Score * 0.40
+      adrScore * 0.40 +
+      expansionRoomScore * 0.35 +
+      dollarVolScore * 0.25
     );
 
     const signal = finalSignal(expansionScore, rsScore, expansionUsed);
@@ -289,27 +320,31 @@ async function run(symbol, benchmark) {
       <h2>${symbol} Expansion Read</h2>
       <p><strong>Final Signal:</strong> ${signal}</p>
       <p><strong>ADR20:</strong> ${adr.toFixed(2)}%</p>
+      <p><strong>ADR Source:</strong> ${adrSource}</p>
       <p><strong>Today Range:</strong> ${todayRange.toFixed(2)}%</p>
       <p><strong>Expansion Used:</strong> ${expansionUsed.toFixed(0)}%</p>
-      <p><strong>Relative Strength:</strong> ${symbol} is ${rs5Spread >= 0 ? "outperforming" : "underperforming"} ${benchmark} by ${rs5Spread.toFixed(2)}% over 5 sessions.</p>
+      <p><strong>Relative Strength:</strong> ${symbol} is ${
+        stock.changePercent >= bench.changePercent ? "outperforming" : "underperforming"
+      } ${benchmark} by ${(stock.changePercent - bench.changePercent).toFixed(2)}% intraday.</p>
       <p><strong>Institutional Interpretation:</strong>
         ${
-          expansionScore >= 80 && rsScore >= 70
+          signal.includes("A+")
           ? "High-quality expansion candidate. If Regime is aligned, this deserves setup/contract review."
-          : expansionUsed > 110
-          ? "The move may already be extended. Avoid chasing unless there is clean consolidation or fresh catalyst."
-          : "Not yet an A+ expansion candidate. Monitor for compression, stronger volume, or relative strength improvement."
+          : signal.includes("WATCHLIST")
+          ? "Candidate is usable, but wait for a clean pullback, retest, or coil before contract selection."
+          : "Not yet strong enough. Avoid forcing it until expansion/relative strength improves."
         }
       </p>
+      ${adrWarning ? `<p class="warn"><strong>Note:</strong> ${adrWarning}</p>` : ""}
     `;
 
     document.getElementById("metrics").innerHTML = `
       <div class="card">
         <h2>Price / Range</h2>
-        <p>Last Close: $${last.close.toFixed(2)}</p>
-        <p>Open: $${last.open.toFixed(2)}</p>
-        <p>High / Low: $${last.high.toFixed(2)} / $${last.low.toFixed(2)}</p>
-        <p>Day Change: <span class="${dayChange >= 0 ? "good" : "bad"}">${dayChange.toFixed(2)}%</span></p>
+        <p>Current: $${stock.price.toFixed(2)}</p>
+        <p>Prev Close: $${stock.prevClose.toFixed(2)}</p>
+        <p>High / Low: $${stock.high.toFixed(2)} / $${stock.low.toFixed(2)}</p>
+        <p>Day Change: <span class="${stock.changePercent >= 0 ? "good" : "bad"}">${stock.changePercent.toFixed(2)}%</span></p>
       </div>
 
       <div class="card">
@@ -321,19 +356,18 @@ async function run(symbol, benchmark) {
       </div>
 
       <div class="card">
-        <h2>Liquidity / RVOL</h2>
-        <p>Volume: ${latestVol.toLocaleString()}</p>
-        <p>Avg Vol 20D: ${Math.round(avgVol).toLocaleString()}</p>
-        <p>RVOL: ${rvol.toFixed(2)}x</p>
+        <h2>Liquidity</h2>
+        <p>Volume: ${Number(stock.volume).toLocaleString()}</p>
         <p>Dollar Vol: ${formatLarge(dollarVol)}</p>
+        <p>Dollar Vol Score: ${dollarVolScore}/100</p>
       </div>
 
       <div class="card">
         <h2>Relative Strength</h2>
-        <p>${symbol} 5D: ${stock5d.toFixed(2)}%</p>
-        <p>${benchmark} 5D: ${bench5d.toFixed(2)}%</p>
-        <p>5D Spread: ${rs5Spread.toFixed(2)}%</p>
-        <p>20D Spread: ${rs20Spread.toFixed(2)}%</p>
+        <p>${symbol}: ${stock.changePercent.toFixed(2)}%</p>
+        <p>${benchmark}: ${bench.changePercent.toFixed(2)}%</p>
+        <p>Spread: ${(stock.changePercent - bench.changePercent).toFixed(2)}%</p>
+        <p>RS Score: ${rsScore}/100</p>
       </div>
 
       <div class="card">
@@ -341,7 +375,7 @@ async function run(symbol, benchmark) {
         <p>ADR Score: ${adrScore}/100</p>
         <p>Expansion Room: ${expansionRoomScore}/100</p>
         <p>Dollar Vol: ${dollarVolScore}/100</p>
-        <p>RVOL: ${rvolScore}/100</p>
+        <p>Expansion Score: ${expansionScore}/100</p>
       </div>
 
       <div class="card">
@@ -358,7 +392,7 @@ async function run(symbol, benchmark) {
       </div>
     `;
 
-    setStatus(`${symbol} Massive expansion scan loaded.`);
+    setStatus(`${symbol} Expansion + RS scan loaded.`);
   } catch (err) {
     setStatus("Failed to load. Check Error Log.");
     setError(err.message);
@@ -366,7 +400,7 @@ async function run(symbol, benchmark) {
 }
 
 if (API_KEY && LAST_SYMBOL) {
-  run(LAST_SYMBOL, LAST_BENCHMARK);
+  run(LAST_SYMBOL, LAST_BENCHMARK, LAST_MANUAL_ADR);
 }
 </script>
 
