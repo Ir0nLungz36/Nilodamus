@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>ADR Expansion + Relative Strength Dashboard</title>
+  <title>Massive ADR Expansion + Relative Strength</title>
   <style>
     body { background:#07080b; color:white; font-family:Arial; padding:24px; }
     input, select, button { padding:10px; border-radius:8px; border:1px solid #333; margin:4px; }
-    input, select { background:#11141b; color:white; width:220px; }
+    input, select { background:#11141b; color:white; width:230px; }
     button { background:#1f6feb; color:white; cursor:pointer; }
     .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:18px; }
     .card { background:#12141a; border:1px solid #2b3140; border-radius:14px; padding:18px; }
@@ -21,11 +21,11 @@
 
 <body>
 
-<h1>ADR Expansion + Relative Strength Dashboard</h1>
+<h1>Massive ADR Expansion + Relative Strength Dashboard</h1>
 
 <div class="card">
   <h2>Inputs</h2>
-  <input id="apiKeyInput" type="password" placeholder="Finnhub API Key">
+  <input id="apiKeyInput" type="password" placeholder="Massive API Key">
   <input id="symbolInput" placeholder="Symbol e.g. NVDA">
   <select id="benchmarkInput">
     <option value="QQQ">QQQ - Growth</option>
@@ -42,20 +42,9 @@
 </div>
 
 <div class="grid">
-  <div class="card">
-    <h2>Expansion Score</h2>
-    <div id="expansionScore" class="score">--</div>
-  </div>
-
-  <div class="card">
-    <h2>Relative Strength</h2>
-    <div id="rsScore" class="score">--</div>
-  </div>
-
-  <div class="card">
-    <h2>Final Signal</h2>
-    <div id="finalSignal">Waiting...</div>
-  </div>
+  <div class="card"><h2>Expansion Score</h2><div id="expansionScore" class="score">--</div></div>
+  <div class="card"><h2>Relative Strength</h2><div id="rsScore" class="score">--</div></div>
+  <div class="card"><h2>Final Signal</h2><div id="finalSignal">Waiting...</div></div>
 </div>
 
 <h2>Institutional Read</h2>
@@ -70,7 +59,7 @@
 </div>
 
 <script>
-let API_KEY = localStorage.getItem("FINNHUB_API_KEY") || "";
+let API_KEY = localStorage.getItem("MASSIVE_API_KEY") || "";
 let LAST_SYMBOL = localStorage.getItem("EXPANSION_SYMBOL") || "";
 let LAST_BENCHMARK = localStorage.getItem("EXPANSION_BENCHMARK") || "QQQ";
 
@@ -87,10 +76,10 @@ function saveAndRun() {
   const symbol = document.getElementById("symbolInput").value.trim().toUpperCase();
   const benchmark = document.getElementById("benchmarkInput").value;
 
-  if (!API_KEY) return setStatus("Paste your Finnhub API key first.");
+  if (!API_KEY) return setStatus("Paste your Massive API key first.");
   if (!symbol) return setStatus("Enter a symbol first.");
 
-  localStorage.setItem("FINNHUB_API_KEY", API_KEY);
+  localStorage.setItem("MASSIVE_API_KEY", API_KEY);
   localStorage.setItem("EXPANSION_SYMBOL", symbol);
   localStorage.setItem("EXPANSION_BENCHMARK", benchmark);
 
@@ -103,55 +92,50 @@ function clearInputs() {
   setStatus("Symbol cleared.");
 }
 
-async function finnhubQuote(symbol) {
-  const url = `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${encodeURIComponent(API_KEY)}`;
-  const r = await fetch(url);
+async function massive(url) {
+  const joiner = url.includes("?") ? "&" : "?";
+  const fullUrl = `${url}${joiner}apiKey=${encodeURIComponent(API_KEY)}`;
+
+  const r = await fetch(fullUrl);
   const data = await r.json();
 
-  if (!r.ok || data.error) {
-    throw new Error(`${symbol} quote error: ${JSON.stringify(data, null, 2)}`);
+  if (!r.ok || data.status === "ERROR" || data.status === "NOT_AUTHORIZED") {
+    throw new Error(JSON.stringify(data, null, 2));
   }
 
-  return {
-    symbol,
-    current: data.c || 0,
-    change: data.d || 0,
-    changePercent: data.dp || 0,
-    high: data.h || 0,
-    low: data.l || 0,
-    open: data.o || 0,
-    prevClose: data.pc || 0,
-    timestamp: data.t || 0
-  };
+  return data;
 }
 
-async function finnhubCandles(symbol, resolution="D", daysBack=80) {
-  const now = Math.floor(Date.now() / 1000);
-  const from = now - daysBack * 86400;
+function dateNDaysAgo(days) {
+  const d = new Date(Date.now() - days * 86400000);
+  return d.toISOString().slice(0,10);
+}
+
+function todayISO() {
+  return new Date().toISOString().slice(0,10);
+}
+
+async function massiveDailyBars(symbol, daysBack=100) {
+  const from = dateNDaysAgo(daysBack);
+  const to = todayISO();
 
   const url =
-    `https://finnhub.io/api/v1/stock/candle?symbol=${encodeURIComponent(symbol)}&resolution=${resolution}&from=${from}&to=${now}&token=${encodeURIComponent(API_KEY)}`;
+    `https://api.massive.com/v2/aggs/ticker/${encodeURIComponent(symbol)}/range/1/day/${from}/${to}?adjusted=true&sort=asc&limit=120`;
 
-  const r = await fetch(url);
-  const data = await r.json();
+  const data = await massive(url);
 
-  if (!r.ok || data.s === "no_data" || data.error) {
-    throw new Error(`${symbol} candle error: ${JSON.stringify(data, null, 2)}`);
+  if (!data.results || !data.results.length) {
+    throw new Error(`${symbol} bars error: ${JSON.stringify(data, null, 2)}`);
   }
 
-  const bars = [];
-  for (let i = 0; i < data.c.length; i++) {
-    bars.push({
-      time: data.t[i],
-      open: data.o[i],
-      high: data.h[i],
-      low: data.l[i],
-      close: data.c[i],
-      volume: data.v[i]
-    });
-  }
-
-  return bars;
+  return data.results.map(b => ({
+    time: b.t,
+    open: b.o,
+    high: b.h,
+    low: b.l,
+    close: b.c,
+    volume: b.v
+  }));
 }
 
 function average(arr) {
@@ -225,15 +209,9 @@ function classForScore(score) {
 }
 
 function finalSignal(expansionScore, rsScore, expansionUsed) {
-  if (expansionScore >= 80 && rsScore >= 70 && expansionUsed <= 75) {
-    return "A+ EXPANSION CANDIDATE";
-  }
-  if (expansionScore >= 65 && rsScore >= 55) {
-    return "WATCHLIST / WAIT FOR SETUP";
-  }
-  if (expansionUsed > 100) {
-    return "MOVE ALREADY EXTENDED";
-  }
+  if (expansionScore >= 80 && rsScore >= 70 && expansionUsed <= 85) return "A+ EXPANSION CANDIDATE";
+  if (expansionScore >= 65 && rsScore >= 55) return "WATCHLIST / WAIT FOR SETUP";
+  if (expansionUsed > 110) return "MOVE ALREADY EXTENDED";
   return "LOW PRIORITY";
 }
 
@@ -246,24 +224,27 @@ function formatLarge(num) {
 async function run(symbol, benchmark) {
   try {
     setError("");
-    setStatus(`Loading ${symbol} expansion data...`);
+    setStatus(`Loading ${symbol} Massive daily bars...`);
 
-    const quote = await finnhubQuote(symbol);
-    await sleep(350);
-    const bars = await finnhubCandles(symbol);
-    await sleep(350);
-    const benchQuote = await finnhubQuote(benchmark);
-    await sleep(350);
-    const benchBars = await finnhubCandles(benchmark);
+    const bars = await massiveDailyBars(symbol);
+    await sleep(700);
+
+    setStatus(`Loading ${benchmark} benchmark bars...`);
+    const benchBars = await massiveDailyBars(benchmark);
+
+    const last = bars[bars.length - 1];
+    const prev = bars[bars.length - 2];
 
     const adr = adr20(bars);
-    const todayRange = ((quote.high - quote.low) / quote.current) * 100;
+    const todayRange = ((last.high - last.low) / last.close) * 100;
     const expansionUsed = adr ? (todayRange / adr) * 100 : 0;
 
     const avgVol = avgVolume20(bars);
-    const latestVol = bars[bars.length - 1]?.volume || 0;
+    const latestVol = last.volume || 0;
     const rvol = avgVol ? latestVol / avgVol : 0;
-    const dollarVol = quote.current * latestVol;
+    const dollarVol = last.close * latestVol;
+
+    const dayChange = prev ? ((last.close - prev.close) / prev.close) * 100 : 0;
 
     const stock5d = changeOverBars(bars, 5);
     const stock20d = changeOverBars(bars, 20);
@@ -315,7 +296,7 @@ async function run(symbol, benchmark) {
         ${
           expansionScore >= 80 && rsScore >= 70
           ? "High-quality expansion candidate. If Regime is aligned, this deserves setup/contract review."
-          : expansionUsed > 100
+          : expansionUsed > 110
           ? "The move may already be extended. Avoid chasing unless there is clean consolidation or fresh catalyst."
           : "Not yet an A+ expansion candidate. Monitor for compression, stronger volume, or relative strength improvement."
         }
@@ -325,10 +306,10 @@ async function run(symbol, benchmark) {
     document.getElementById("metrics").innerHTML = `
       <div class="card">
         <h2>Price / Range</h2>
-        <p>Current: $${quote.current.toFixed(2)}</p>
-        <p>Open: $${quote.open.toFixed(2)}</p>
-        <p>High / Low: $${quote.high.toFixed(2)} / $${quote.low.toFixed(2)}</p>
-        <p>Day Change: <span class="${quote.changePercent >= 0 ? "good" : "bad"}">${quote.changePercent.toFixed(2)}%</span></p>
+        <p>Last Close: $${last.close.toFixed(2)}</p>
+        <p>Open: $${last.open.toFixed(2)}</p>
+        <p>High / Low: $${last.high.toFixed(2)} / $${last.low.toFixed(2)}</p>
+        <p>Day Change: <span class="${dayChange >= 0 ? "good" : "bad"}">${dayChange.toFixed(2)}%</span></p>
       </div>
 
       <div class="card">
@@ -377,7 +358,7 @@ async function run(symbol, benchmark) {
       </div>
     `;
 
-    setStatus(`${symbol} expansion scan loaded.`);
+    setStatus(`${symbol} Massive expansion scan loaded.`);
   } catch (err) {
     setStatus("Failed to load. Check Error Log.");
     setError(err.message);
