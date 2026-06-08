@@ -1,167 +1,513 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html>
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>MASSIVE Expansion + Relative Strength Portal</title>
-  <style>
-    :root{--bg:#070a12;--panel:#101725;--panel2:#0c111d;--txt:#e8eefc;--muted:#8f9bb3;--line:#243149;--good:#19d27f;--warn:#ffd166;--bad:#ff5c7a;--blue:#6aa8ff;--purple:#b389ff}*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;background:radial-gradient(circle at 20% 0%,#13213a 0%,#070a12 42%);color:var(--txt)}.wrap{max-width:1220px;margin:0 auto;padding:22px}.top{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap}.brand h1{margin:0;font-size:26px;letter-spacing:.2px}.brand p{margin:6px 0 0;color:var(--muted);font-size:13px}.controls{display:flex;gap:8px;flex-wrap:wrap}.controls input,.controls select{background:var(--panel);border:1px solid var(--line);border-radius:12px;color:var(--txt);padding:12px 12px;outline:none}.controls input.symbol{width:300px;text-transform:uppercase}.controls input.key{width:245px}.controls button{border:0;border-radius:12px;padding:12px 16px;font-weight:800;cursor:pointer;background:linear-gradient(135deg,var(--blue),var(--purple));color:white}.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px;margin-top:18px}.card{background:linear-gradient(180deg,rgba(16,23,37,.96),rgba(10,15,26,.96));border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 14px 40px rgba(0,0,0,.25)}.span3{grid-column:span 3}.span4{grid-column:span 4}.span6{grid-column:span 6}.span8{grid-column:span 8}.span12{grid-column:span 12}.label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}.big{font-size:32px;font-weight:900;margin-top:8px}.sub{color:var(--muted);font-size:13px;margin-top:6px}.pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:12px;color:var(--muted);margin-top:10px}.good{color:var(--good)}.warn{color:var(--warn)}.bad{color:var(--bad)}.bar{height:11px;background:#0a0f1a;border:1px solid var(--line);border-radius:999px;overflow:hidden;margin-top:11px}.fill{height:100%;width:0%;background:linear-gradient(90deg,var(--bad),var(--warn),var(--good));transition:.35s}.scorebox{display:flex;align-items:center;gap:16px}.grade{width:86px;height:86px;border-radius:24px;display:grid;place-items:center;font-size:34px;font-weight:1000;background:#0b1322;border:1px solid var(--line)}.decision{font-size:22px;font-weight:900}.table{width:100%;border-collapse:collapse;margin-top:10px}.table th,.table td{border-bottom:1px solid var(--line);padding:10px 6px;text-align:left;font-size:13px}.table th{color:var(--muted);font-size:12px;text-transform:uppercase}.tiny{font-size:12px;color:var(--muted);line-height:1.45}.log{white-space:pre-wrap;background:#050812;border:1px solid var(--line);border-radius:14px;padding:12px;color:#b7c4dd;font-size:12px;max-height:180px;overflow:auto}.tag{font-weight:800}.checklist div{display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:9px 0;font-size:13px}.checklist span:last-child{font-weight:900}.footer{margin:18px 0 4px;color:var(--muted);font-size:12px}@media(max-width:900px){.span3,.span4,.span6,.span8{grid-column:span 12}.controls input.symbol,.controls input.key{width:100%}.controls{width:100%}.controls button,.controls select{flex:1}.top{align-items:stretch}}
-  </style>
+<meta charset="UTF-8">
+<title>Expansion + Relative Strength Portal</title>
+
+<style>
+
+body{
+    background:#0f172a;
+    color:#e2e8f0;
+    font-family:Arial,sans-serif;
+    margin:0;
+    padding:20px;
+}
+
+h1{
+    text-align:center;
+}
+
+.container{
+    max-width:1400px;
+    margin:auto;
+}
+
+.panel{
+    background:#1e293b;
+    border-radius:12px;
+    padding:15px;
+    margin-bottom:15px;
+}
+
+input, textarea{
+    width:100%;
+    padding:10px;
+    border-radius:8px;
+    border:none;
+    margin-top:5px;
+    margin-bottom:10px;
+}
+
+button{
+    background:#2563eb;
+    color:white;
+    border:none;
+    padding:12px;
+    border-radius:8px;
+    cursor:pointer;
+    width:100%;
+    font-weight:bold;
+}
+
+button:hover{
+    background:#1d4ed8;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+th{
+    background:#0f172a;
+    color:white;
+}
+
+th,td{
+    padding:10px;
+    border-bottom:1px solid #334155;
+    text-align:center;
+}
+
+.s{
+    color:#22c55e;
+    font-weight:bold;
+}
+
+.a{
+    color:#38bdf8;
+    font-weight:bold;
+}
+
+.b{
+    color:#facc15;
+    font-weight:bold;
+}
+
+.c{
+    color:#ef4444;
+    font-weight:bold;
+}
+
+.log{
+    font-size:12px;
+    white-space:pre-wrap;
+}
+
+</style>
 </head>
+
 <body>
-  <div class="wrap">
-    <div class="top">
-      <div class="brand">
-        <h1>Expansion + Relative Strength Portal</h1>
-        <p>ADR expansion, intraday range pressure, benchmark RS, volume participation, and clean decision grade.</p>
-      </div>
-      <div class="controls">
-        <input id="apiKey" class="key" type="password" placeholder="MASSIVE API key" />
-        <input id="symbols" class="symbol" value="NVDA, SOFI, HOOD, IWM" placeholder="NVDA, SOFI, HOOD" />
-        <select id="benchmark"><option>SPY</option><option>QQQ</option><option>IWM</option></select>
-        <button onclick="runPortal()">Run Scan</button>
-      </div>
-    </div>
 
-    <div class="grid">
-      <div class="card span12 scorebox">
-        <div id="mainGrade" class="grade">—</div>
-        <div>
-          <div class="label">Portal Decision</div>
-          <div id="mainDecision" class="decision">Enter key + symbols, then run scan.</div>
-          <div id="mainWhy" class="sub">Best use: wait for ADR expansion + RS alignment + volume confirmation before looking at option chains.</div>
-        </div>
-      </div>
+<div class="container">
 
-      <div class="card span3"><div class="label">Best Symbol</div><div id="bestSymbol" class="big">—</div><div id="bestSub" class="sub">Waiting</div></div>
-      <div class="card span3"><div class="label">ADR Expansion</div><div id="bestAdr" class="big">—</div><div class="bar"><div id="bestAdrFill" class="fill"></div></div><div class="sub">Current range ÷ 20D ADR</div></div>
-      <div class="card span3"><div class="label">Relative Strength</div><div id="bestRs" class="big">—</div><div class="bar"><div id="bestRsFill" class="fill"></div></div><div class="sub">Ticker % move - benchmark % move</div></div>
-      <div class="card span3"><div class="label">Volume Pressure</div><div id="bestVol" class="big">—</div><div class="bar"><div id="bestVolFill" class="fill"></div></div><div class="sub">Today volume ÷ 20D avg volume</div></div>
+<h1>
+ADR Expansion + Relative Strength Dashboard
+</h1>
 
-      <div class="card span8">
-        <div class="label">Ranked Expansion Watchlist</div>
-        <table class="table" id="resultsTable">
-          <thead><tr><th>Rank</th><th>Symbol</th><th>Grade</th><th>Score</th><th>Move</th><th>RS</th><th>ADR%</th><th>Vol x</th><th>Read</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <div class="card span4">
-        <div class="label">Professional Checklist</div>
-        <div class="checklist" id="checklist">
-          <div><span>Regime benchmark green?</span><span>—</span></div>
-          <div><span>Symbol beating benchmark?</span><span>—</span></div>
-          <div><span>ADR expansion ≥ 70%?</span><span>—</span></div>
-          <div><span>Volume participation ≥ 1.0x?</span><span>—</span></div>
-          <div><span>Decision quality?</span><span>—</span></div>
-        </div>
-        <p class="tiny">Interpretation: S = expansion + RS + volume aligned. A = monitor for option-chain confirmation. B/C = no rush; wait for better alignment.</p>
-      </div>
+<div class="panel">
 
-      <div class="card span6">
-        <div class="label">Endpoint Use</div>
-        <p class="tiny"><span class="tag">Snapshot:</span> /v2/snapshot/locale/us/markets/stocks/tickers/{ticker}</p>
-        <p class="tiny"><span class="tag">Historical daily bars:</span> /v2/aggs/ticker/{ticker}/range/1/day/{from}/{to}</p>
-        <p class="tiny"><span class="tag">Logic:</span> historical bars create 20D ADR and average volume; snapshot provides current day range, last price, and volume.</p>
-      </div>
-      <div class="card span6"><div class="label">Log</div><div id="log" class="log">Ready.</div></div>
-    </div>
-    <div class="footer">Keep your key private. For production, route API calls through a small backend/proxy instead of exposing the key in browser code.</div>
-  </div>
+<label>Massive API Key</label>
+
+<input
+type="password"
+id="apiKey"
+placeholder="Paste Massive API Key">
+
+<label>Symbols</label>
+
+<textarea
+id="symbols"
+rows="6">
+
+NVDA,
+OPEN,
+SOFI,
+PLTR,
+BAC,
+SMCI,
+QQQ
+
+</textarea>
+
+<button onclick="runScan()">
+RUN SCAN
+</button>
+
+</div>
+
+<div class="panel">
+
+<div id="results">
+
+Waiting for scan...
+
+</div>
+
+</div>
+
+<div class="panel">
+
+<div id="log" class="log"></div>
+
+</div>
+
+</div>
 
 <script>
-const BASE = "https://api.massive.com";
-const $ = id => document.getElementById(id);
-function todayISO(){ return new Date().toISOString().slice(0,10); }
-function daysAgoISO(n){ const d=new Date(); d.setDate(d.getDate()-n); return d.toISOString().slice(0,10); }
-function fmt(n,d=2){ return Number.isFinite(n) ? n.toFixed(d) : "—"; }
-function pct(n){ return Number.isFinite(n) ? (n>=0?"+":"") + n.toFixed(2) + "%" : "—"; }
-function log(s){ $("log").textContent = s + "\n" + $("log").textContent; }
-async function massive(path, key){
-  const sep = path.includes("?") ? "&" : "?";
-  const url = `${BASE}${path}${sep}apiKey=${encodeURIComponent(key)}`;
-  const r = await fetch(url);
-  if(!r.ok) throw new Error(`${r.status} ${r.statusText} on ${path}`);
-  return r.json();
+
+function writeLog(text){
+
+    document
+    .getElementById("log")
+    .innerHTML += text + "\\n";
+
 }
-function normalizeSnapshot(j){
-  const t = j.ticker || j.results || j;
-  const day = t.day || {};
-  const prev = t.prevDay || t.prev_day || {};
-  const lastTrade = t.lastTrade || t.last_trade || {};
-  const price = lastTrade.p || day.c || t.fmv || prev.c;
-  return { day, prev, price, symbol: t.ticker || t.T || "" };
+
+async function getBars(symbol){
+
+    const apiKey =
+    document.getElementById("apiKey").value;
+
+    const end =
+    new Date()
+    .toISOString()
+    .split("T")[0];
+
+    const startDate =
+    new Date();
+
+    startDate.setDate(
+        startDate.getDate()-60
+    );
+
+    const start =
+    startDate
+    .toISOString()
+    .split("T")[0];
+
+    const url =
+`https://api.massive.com/v2/aggs/ticker/${symbol}/range/1/day/${start}/${end}?adjusted=true&sort=asc&limit=120&apikey=${apiKey}`;
+
+    const response =
+    await fetch(url);
+
+    if(!response.ok){
+
+        throw new Error(
+            "HTTP " + response.status
+        );
+
+    }
+
+    const data =
+    await response.json();
+
+    return data.results || [];
+
 }
-async function loadTicker(symbol, key){
-  const from = daysAgoISO(55), to = todayISO();
-  const [snapRaw, histRaw] = await Promise.all([
-    massive(`/v2/snapshot/locale/us/markets/stocks/tickers/${symbol}`, key),
-    massive(`/v2/aggs/ticker/${symbol}/range/1/day/${from}/${to}?adjusted=true&sort=desc&limit=40`, key)
-  ]);
-  const snap = normalizeSnapshot(snapRaw);
-  const bars = (histRaw.results || []).filter(b => Number.isFinite(b.h) && Number.isFinite(b.l));
-  const last20 = bars.slice(1,21).length >= 10 ? bars.slice(1,21) : bars.slice(0,20);
-  const adr = last20.reduce((a,b)=>a+(b.h-b.l),0) / Math.max(last20.length,1);
-  const avgVol = last20.reduce((a,b)=>a+(b.v||0),0) / Math.max(last20.length,1);
-  const day = snap.day, prev = snap.prev;
-  const open = day.o || prev.c || snap.price;
-  const high = day.h || snap.price;
-  const low = day.l || snap.price;
-  const close = snap.price || day.c || prev.c;
-  const volume = day.v || 0;
-  const range = high - low;
-  const movePct = prev.c ? ((close - prev.c) / prev.c) * 100 : NaN;
-  const adrPct = adr ? (range / adr) * 100 : NaN;
-  const volX = avgVol ? volume / avgVol : NaN;
-  return { symbol, open, high, low, close, volume, prevClose: prev.c, movePct, adr, adrPct, volX };
+
+function adr20(bars){
+
+    const last =
+    bars.slice(-20);
+
+    let total = 0;
+
+    last.forEach(x=>{
+
+        total +=
+        (x.h-x.l);
+
+    });
+
+    return total/last.length;
+
 }
-function scoreRow(r, bench){
-  r.rs = r.movePct - bench.movePct;
-  const adrScore = Math.min(Math.max(r.adrPct || 0,0),140) / 140 * 35;
-  const rsScore = Math.min(Math.max((r.rs || 0)+2,0),6) / 6 * 35;
-  const volScore = Math.min(Math.max(r.volX || 0,0),2.5) / 2.5 * 20;
-  const dirScore = r.movePct > 0 ? 10 : 0;
-  r.score = adrScore + rsScore + volScore + dirScore;
-  r.grade = r.score >= 82 ? "S" : r.score >= 70 ? "A" : r.score >= 55 ? "B" : "C";
-  r.read = r.grade === "S" ? "Expansion leader" : r.grade === "A" ? "Monitor option chain" : r.grade === "B" ? "Needs trigger" : "Wait";
-  return r;
+
+function avgVol20(bars){
+
+    const last =
+    bars.slice(-20);
+
+    let total = 0;
+
+    last.forEach(x=>{
+
+        total += x.v;
+
+    });
+
+    return total/last.length;
+
 }
-function render(rows, bench){
-  const tb = $("resultsTable").querySelector("tbody"); tb.innerHTML = "";
-  rows.forEach((r,i)=>{
-    const cls = r.grade === "S" ? "good" : r.grade === "A" ? "warn" : "";
-    tb.insertAdjacentHTML("beforeend", `<tr><td>${i+1}</td><td><b>${r.symbol}</b></td><td class="${cls}">${r.grade}</td><td>${fmt(r.score,0)}</td><td class="${r.movePct>=0?'good':'bad'}">${pct(r.movePct)}</td><td class="${r.rs>=0?'good':'bad'}">${pct(r.rs)}</td><td>${fmt(r.adrPct,0)}%</td><td>${fmt(r.volX,2)}x</td><td>${r.read}</td></tr>`);
-  });
-  const b = rows[0];
-  if(!b) return;
-  $("bestSymbol").textContent = b.symbol; $("bestSub").textContent = `${pct(b.movePct)} vs ${bench.symbol} ${pct(bench.movePct)}`;
-  $("bestAdr").textContent = `${fmt(b.adrPct,0)}%`; $("bestAdrFill").style.width = Math.min(b.adrPct,100)+"%";
-  $("bestRs").textContent = pct(b.rs); $("bestRsFill").style.width = Math.min(Math.max((b.rs+2)/6*100,0),100)+"%";
-  $("bestVol").textContent = `${fmt(b.volX,2)}x`; $("bestVolFill").style.width = Math.min(b.volX/2.5*100,100)+"%";
-  $("mainGrade").textContent = b.grade;
-  $("mainGrade").className = `grade ${b.grade==='S'?'good':b.grade==='A'?'warn':''}`;
-  $("mainDecision").textContent = b.grade === "S" ? `${b.symbol}: S-tier expansion candidate` : b.grade === "A" ? `${b.symbol}: A-tier monitor, confirm chain` : `${b.symbol}: not clean enough yet`;
-  $("mainWhy").textContent = `ADR ${fmt(b.adrPct,0)}%, RS ${pct(b.rs)}, volume ${fmt(b.volX,2)}x. Benchmark: ${bench.symbol} ${pct(bench.movePct)}.`;
-  $("checklist").innerHTML = `
-    <div><span>Regime benchmark green?</span><span class="${bench.movePct>=0?'good':'bad'}">${bench.movePct>=0?'YES':'NO'}</span></div>
-    <div><span>Symbol beating benchmark?</span><span class="${b.rs>0?'good':'bad'}">${b.rs>0?'YES':'NO'}</span></div>
-    <div><span>ADR expansion ≥ 70%?</span><span class="${b.adrPct>=70?'good':'warn'}">${b.adrPct>=70?'YES':'NO'}</span></div>
-    <div><span>Volume participation ≥ 1.0x?</span><span class="${b.volX>=1?'good':'warn'}">${b.volX>=1?'YES':'NO'}</span></div>
-    <div><span>Decision quality?</span><span>${b.grade}</span></div>`;
+
+function grade(
+    expansion,
+    rs,
+    volume
+){
+
+    if(
+        expansion>120 &&
+        rs>2 &&
+        volume>1.5
+    ){
+        return "S";
+    }
+
+    if(
+        expansion>100 &&
+        rs>1 &&
+        volume>1.2
+    ){
+        return "A";
+    }
+
+    if(
+        expansion>80 &&
+        rs>0
+    ){
+        return "B";
+    }
+
+    return "C";
+
 }
-async function runPortal(){
-  const key = $("apiKey").value.trim();
-  if(!key){ alert("Paste your MASSIVE API key first."); return; }
-  const syms = [...new Set($("symbols").value.toUpperCase().split(/[\s,]+/).filter(Boolean))];
-  const benchSym = $("benchmark").value.toUpperCase();
-  log(`Running scan: ${syms.join(", ")} vs ${benchSym}`);
-  try{
-    const bench = await loadTicker(benchSym, key); bench.symbol = benchSym;
-    const rows = (await Promise.all(syms.map(s => loadTicker(s, key).catch(e => ({symbol:s,error:e.message}))))).filter(r=>!r.error).map(r=>scoreRow(r, bench)).sort((a,b)=>b.score-a.score);
-    const errs = syms.length - rows.length; if(errs) log(`${errs} symbol(s) failed. Check ticker spelling or plan access.`);
-    render(rows, bench);
-    log(`Done. Best: ${rows[0]?.symbol || "none"}`);
-  }catch(e){ log("ERROR: " + e.message); alert(e.message); }
+
+function render(rows){
+
+    let html = `
+
+<table>
+
+<tr>
+<th>Symbol</th>
+<th>Price</th>
+<th>Expansion%</th>
+<th>RS vs SPY</th>
+<th>Vol Factor</th>
+<th>Grade</th>
+</tr>
+
+`;
+
+    rows.forEach(r=>{
+
+        html += `
+
+<tr>
+
+<td>${r.symbol}</td>
+
+<td>$${r.price}</td>
+
+<td>${r.expansion}%</td>
+
+<td>${r.rs}%</td>
+
+<td>${r.volume}x</td>
+
+<td class="${r.grade.toLowerCase()}">
+${r.grade}
+</td>
+
+</tr>
+
+`;
+
+    });
+
+    html += "</table>";
+
+    document
+    .getElementById("results")
+    .innerHTML = html;
+
 }
+
+async function runScan(){
+
+    document
+    .getElementById("log")
+    .innerHTML = "";
+
+    writeLog(
+        "Loading SPY benchmark..."
+    );
+
+    const spyBars =
+    await getBars("SPY");
+
+    const spyLatest =
+    spyBars[spyBars.length-1];
+
+    const spyPrev =
+    spyBars[spyBars.length-2];
+
+    const spyReturn =
+
+    (
+        (
+            spyLatest.c -
+            spyPrev.c
+        )
+
+        /
+
+        spyPrev.c
+
+    ) * 100;
+
+    const symbols =
+
+    document
+    .getElementById("symbols")
+    .value
+
+    .split(",")
+
+    .map(
+        x=>x.trim()
+    )
+
+    .filter(Boolean);
+
+    let results = [];
+
+    for(const symbol of symbols){
+
+        try{
+
+            writeLog(
+                "Scanning " + symbol
+            );
+
+            const bars =
+            await getBars(symbol);
+
+            if(
+                bars.length<21
+            ){
+                continue;
+            }
+
+            const latest =
+            bars[bars.length-1];
+
+            const prev =
+            bars[bars.length-2];
+
+            const adr =
+            adr20(bars);
+
+            const avgVol =
+            avgVol20(bars);
+
+            const expansion =
+
+            (
+                (
+                    latest.h -
+                    latest.l
+                )
+
+                /
+
+                adr
+
+            ) * 100;
+
+            const stockReturn =
+
+            (
+                (
+                    latest.c -
+                    prev.c
+                )
+
+                /
+
+                prev.c
+
+            ) * 100;
+
+            const rs =
+            stockReturn -
+            spyReturn;
+
+            const volFactor =
+            latest.v /
+            avgVol;
+
+            const rank =
+            grade(
+                expansion,
+                rs,
+                volFactor
+            );
+
+            results.push({
+
+                symbol,
+
+                price:
+                latest.c.toFixed(2),
+
+                expansion:
+                expansion.toFixed(1),
+
+                rs:
+                rs.toFixed(2),
+
+                volume:
+                volFactor.toFixed(2),
+
+                grade:
+                rank
+
+            });
+
+        }
+
+        catch(err){
+
+            writeLog(
+
+                symbol +
+
+                " ERROR -> " +
+
+                err.message
+
+            );
+
+        }
+
+    }
+
+    results.sort(
+
+        (a,b)=>
+
+        parseFloat(b.rs)
+
+        -
+
+        parseFloat(a.rs)
+
+    );
+
+    render(results);
+
+    writeLog(
+        "Scan complete."
+    );
+
+}
+
 </script>
+
 </body>
 </html>
