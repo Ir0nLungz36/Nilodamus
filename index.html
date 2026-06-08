@@ -1,454 +1,393 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IWM Institutional Positioning Dashboard</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css" />
+  <title>ADR Expansion + Relative Strength Dashboard</title>
+  <style>
+    body { background:#07080b; color:white; font-family:Arial; padding:24px; }
+    input, select, button { padding:10px; border-radius:8px; border:1px solid #333; margin:4px; }
+    input, select { background:#11141b; color:white; width:220px; }
+    button { background:#1f6feb; color:white; cursor:pointer; }
+    .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:18px; }
+    .card { background:#12141a; border:1px solid #2b3140; border-radius:14px; padding:18px; }
+    .summary { background:#101820; border:1px solid #2e4057; border-radius:16px; padding:24px; font-size:18px; line-height:1.6; }
+    .score { font-size:56px; font-weight:bold; }
+    .good { color:#35d07f; }
+    .warn { color:#f5c542; }
+    .bad { color:#ff5c5c; }
+    .muted { color:#9ca3af; }
+    pre { white-space:pre-wrap; color:#ff8080; }
+  </style>
 </head>
+
 <body>
 
-  <!-- SCANLINE OVERLAY -->
-  <div class="scanlines"></div>
+<h1>ADR Expansion + Relative Strength Dashboard</h1>
 
-  <!-- HEADER -->
-  <header class="hdr">
-    <div class="hdr-left">
-      <span class="hdr-logo">⬡ INST<span class="accent">MAP</span></span>
-      <span class="hdr-sub">Institutional Positioning Intelligence</span>
-    </div>
-    <div class="hdr-center">
-      <div class="regime-badge" id="regimeBadge">
-        <span class="regime-dot"></span>
-        <span id="regimeLabel">LOADING REGIME…</span>
-      </div>
-    </div>
-    <div class="hdr-right">
-      <div class="ticker-input-wrap">
-        <label>TICKER</label>
-        <input id="tickerInput" type="text" value="IWM" maxlength="5" />
-        <button id="loadBtn">SCAN</button>
-      </div>
-      <div class="api-input-wrap">
-        <label>API KEY</label>
-        <input id="apiKeyInput" type="password" placeholder="Polygon.io key…" />
-      </div>
-      <div class="hdr-clock" id="clock">--:--:-- ET</div>
-      <div class="ws-status" id="wsStatus">◎ WS OFF</div>
-      <div id="wsLive" style="width:6px;height:6px;border-radius:50%;background:var(--green);opacity:0.3;transition:opacity .2s;"></div>
-      <div class="market-status" id="mktStatus">● CHECKING</div>
-    </div>
-  </header>
+<div class="card">
+  <h2>Inputs</h2>
+  <input id="apiKeyInput" type="password" placeholder="Finnhub API Key">
+  <input id="symbolInput" placeholder="Symbol e.g. NVDA">
+  <select id="benchmarkInput">
+    <option value="QQQ">QQQ - Growth</option>
+    <option value="SPY">SPY - S&P 500</option>
+    <option value="XLK">XLK - Technology</option>
+    <option value="SOXX">SOXX - Semiconductors</option>
+    <option value="IWM">IWM - Small Caps</option>
+    <option value="XLE">XLE - Energy</option>
+    <option value="XLF">XLF - Financials</option>
+  </select>
+  <button onclick="saveAndRun()">Run Expansion Scan</button>
+  <button onclick="clearInputs()">Clear</button>
+  <p id="status" class="muted">Waiting...</p>
+</div>
 
-  <!-- PLAYBOOK BANNER -->
-  <div class="playbook-banner" id="playbookBanner">
-    <div class="pb-item"><span class="pb-label">REGIME</span><span class="pb-val" id="pbRegime">--</span></div>
-    <div class="pb-divider">|</div>
-    <div class="pb-item"><span class="pb-label">DEALER BIAS</span><span class="pb-val" id="pbBias">--</span></div>
-    <div class="pb-divider">|</div>
-    <div class="pb-item"><span class="pb-label">GAMMA STATE</span><span class="pb-val" id="pbGamma">--</span></div>
-    <div class="pb-divider">|</div>
-    <div class="pb-item"><span class="pb-label">TARGET MAGNET</span><span class="pb-val accent" id="pbTarget">--</span></div>
-    <div class="pb-divider">|</div>
-    <div class="pb-item"><span class="pb-label">PLAYBOOK</span><span class="pb-val highlight" id="pbPlay">--</span></div>
-    <div class="pb-divider">|</div>
-    <div class="pb-item"><span class="pb-label">RISK</span><span class="pb-val" id="pbRisk">--</span></div>
+<div class="grid">
+  <div class="card">
+    <h2>Expansion Score</h2>
+    <div id="expansionScore" class="score">--</div>
   </div>
 
-  <!-- MAIN GRID -->
-  <main class="main-grid">
-
-    <!-- ═══ LAYER 1: REGIME ENGINE ═══ -->
-    <section class="panel layer1" id="layer1">
-      <div class="panel-hdr">
-        <span class="layer-num">L1</span>
-        <span class="panel-title">REGIME ENGINE</span>
-        <span class="panel-sub">Market Direction Filter</span>
-        <div class="panel-refresh" data-layer="1">↻</div>
-      </div>
-      <div class="regime-grid">
-        <div class="regime-card" id="rc-spy">
-          <div class="rc-ticker">SPY</div>
-          <div class="rc-price" id="spy-price">--</div>
-          <div class="rc-change" id="spy-chg">--</div>
-          <div class="rc-label">MARKET DIR</div>
-          <div class="rc-bar"><div class="rc-fill" id="spy-fill"></div></div>
-        </div>
-        <div class="regime-card" id="rc-qqq">
-          <div class="rc-ticker">QQQ</div>
-          <div class="rc-price" id="qqq-price">--</div>
-          <div class="rc-change" id="qqq-chg">--</div>
-          <div class="rc-label">TECH RISK</div>
-          <div class="rc-bar"><div class="rc-fill" id="qqq-fill"></div></div>
-        </div>
-        <div class="regime-card" id="rc-iwm">
-          <div class="rc-ticker">IWM</div>
-          <div class="rc-price" id="iwm-price">--</div>
-          <div class="rc-change" id="iwm-chg">--</div>
-          <div class="rc-label">RISK-ON</div>
-          <div class="rc-bar"><div class="rc-fill" id="iwm-fill"></div></div>
-        </div>
-        <div class="regime-card" id="rc-vix">
-          <div class="rc-ticker">VIX</div>
-          <div class="rc-price" id="vix-price">--</div>
-          <div class="rc-change" id="vix-chg">--</div>
-          <div class="rc-label">VOL REGIME</div>
-          <div class="rc-bar"><div class="rc-fill" id="vix-fill"></div></div>
-        </div>
-      </div>
-      <div class="day-type-row">
-        <div class="day-type-item active" id="dt-trend">TREND DAY</div>
-        <div class="day-type-item" id="dt-chop">CHOP DAY</div>
-        <div class="day-type-item" id="dt-pin">PIN DAY</div>
-        <div class="day-type-item" id="dt-expansion">EXPANSION DAY</div>
-        <div class="day-type-item" id="dt-hedge">HEDGE DAY</div>
-      </div>
-    </section>
-
-    <!-- ═══ LAYER 2: DEALER POSITIONING ENGINE ═══ -->
-    <section class="panel layer2" id="layer2">
-      <div class="panel-hdr">
-        <span class="layer-num">L2</span>
-        <span class="panel-title">DEALER POSITIONING</span>
-        <span class="panel-sub">OI Wall Map + Gamma Exposure</span>
-        <span class="panel-sub" id="allExpiries" style="margin-left:auto;color:var(--cyan);font-size:9px;"></span>
-        <div class="panel-refresh" data-layer="2">↻</div>
-      </div>
-
-      <div class="dealer-top">
-        <div class="wall-stat">
-          <div class="ws-label">CALL WALL</div>
-          <div class="ws-val green" id="callWall">--</div>
-          <div class="ws-sub" id="callWallDist">-- away</div>
-        </div>
-        <div class="wall-stat">
-          <div class="ws-label">MAX PAIN</div>
-          <div class="ws-val yellow" id="maxPain">--</div>
-          <div class="ws-sub">DEALER EQUIL</div>
-        </div>
-        <div class="wall-stat">
-          <div class="ws-label">PUT WALL</div>
-          <div class="ws-val red" id="putWall">--</div>
-          <div class="ws-sub" id="putWallDist">-- away</div>
-        </div>
-        <div class="wall-stat">
-          <div class="ws-label">GAMMA FLIP</div>
-          <div class="ws-val cyan" id="gammaFlip">--</div>
-          <div class="ws-sub">IGNITION LVL</div>
-        </div>
-      </div>
-
-      <!-- OI WALL CHART -->
-      <div class="oi-chart-wrap">
-        <div class="oi-chart-label">OPEN INTEREST WALL MAP</div>
-        <div class="oi-chart" id="oiChart">
-          <div class="oi-loading">Loading OI data…</div>
-        </div>
-        <div class="oi-legend">
-          <span class="leg-item"><span class="leg-dot green"></span> Calls</span>
-          <span class="leg-item"><span class="leg-dot red"></span> Puts</span>
-          <span class="leg-item"><span class="leg-dot cyan"></span> Current Price</span>
-        </div>
-      </div>
-
-      <!-- GAMMA STAIRCASE -->
-      <div class="staircase-wrap">
-        <div class="sc-label">▲ CALL STAIRCASE <span style="color:var(--text3);font-size:8px;">upside acceleration ladder</span></div>
-        <div class="sc-row" id="staircaseRow">
-          <div class="sc-step loading">LOADING…</div>
-        </div>
-        <div class="sc-label" style="margin-top:6px;">▼ PUT STAIRCASE <span style="color:var(--text3);font-size:8px;">downside support levels</span></div>
-        <div class="sc-row" id="putStaircaseRow">
-          <div class="sc-step put-step loading">LOADING…</div>
-        </div>
-      </div>
-
-      <!-- GAMMA STATE -->
-      <div class="gamma-state-row">
-        <div class="gs-item">
-          <div class="gs-label">NET GAMMA EXPOSURE</div>
-          <div class="gs-val" id="netGamma">--</div>
-        </div>
-        <div class="gs-item">
-          <div class="gs-label">GAMMA STATE</div>
-          <div class="gs-val" id="gammaState">--</div>
-        </div>
-        <div class="gs-item">
-          <div class="gs-label">DIST TO CALL WALL</div>
-          <div class="gs-val green" id="distCallWall">--</div>
-        </div>
-        <div class="gs-item">
-          <div class="gs-label">ROOM TO RUN</div>
-          <div class="gs-val" id="roomToRun">--</div>
-        </div>
-      </div>
-
-      <!-- IV SKEW -->
-      <div style="display:flex;align-items:center;gap:10px;">
-        <span style="font-size:8px;color:var(--text3);letter-spacing:2px;">IV SKEW</span>
-        <span class="skew-badge neutral" id="ivSkewBadge">CALCULATING…</span>
-      </div>
-    </section>
-
-    <!-- ═══ LAYER 3: FLOW ENGINE ═══ -->
-    <section class="panel layer3" id="layer3">
-      <div class="panel-hdr">
-        <span class="layer-num">L3</span>
-        <span class="panel-title">FLOW ENGINE</span>
-        <span class="panel-sub">Options Volume + Sweep Activity</span>
-        <div class="panel-refresh" data-layer="3">↻</div>
-      </div>
-
-      <div class="flow-stats">
-        <div class="flow-stat">
-          <div class="fs-label">CALL VOLUME</div>
-          <div class="fs-val green" id="callVol">--</div>
-        </div>
-        <div class="flow-stat">
-          <div class="fs-label">PUT VOLUME</div>
-          <div class="fs-val red" id="putVol">--</div>
-        </div>
-        <div class="flow-stat">
-          <div class="fs-label">VOL P/C RATIO</div>
-          <div class="fs-val" id="pcRatio">--</div>
-        </div>
-        <div class="flow-stat">
-          <div class="fs-label">FLOW SIGNAL</div>
-          <div class="fs-val highlight" id="flowSignal">--</div>
-        </div>
-      </div>
-
-      <!-- OI TOTALS ROW -->
-      <div class="flow-stats" style="margin-top:-4px;">
-        <div class="flow-stat">
-          <div class="fs-label">CALL OI TOTAL</div>
-          <div class="fs-val green" id="totalCallOI" style="font-size:13px">--</div>
-        </div>
-        <div class="flow-stat">
-          <div class="fs-label">PUT OI TOTAL</div>
-          <div class="fs-val red" id="totalPutOI" style="font-size:13px">--</div>
-        </div>
-        <div class="flow-stat">
-          <div class="fs-label">OI P/C RATIO</div>
-          <div class="fs-val" id="oiPCRatio" style="font-size:13px">--</div>
-        </div>
-        <div class="flow-stat">
-          <div class="fs-label">NEAREST EXP</div>
-          <div class="fs-val cyan" id="nearestExp" style="font-size:11px">--</div>
-        </div>
-      </div>
-
-      <!-- FLOW TABLE -->
-      <div class="flow-table-wrap">
-        <div class="ft-hdr-row">
-          <span>STRIKE</span><span>TYPE</span><span>EXP</span><span>OI</span><span>VOL</span><span>IV</span><span>SIGNAL</span>
-        </div>
-        <div class="flow-table-body" id="flowTable">
-          <div class="ft-loading">Scanning option flow…</div>
-        </div>
-      </div>
-
-      <!-- FLOW BAR -->
-      <div class="flow-bar-wrap">
-        <div class="fb-label">CALL/PUT FLOW BALANCE</div>
-        <div class="flow-bar">
-          <div class="fb-calls" id="fbCalls" style="width:50%">CALLS</div>
-          <div class="fb-puts" id="fbPuts" style="width:50%">PUTS</div>
-        </div>
-        <div class="fb-vals">
-          <span id="fbCallPct">50%</span>
-          <span id="fbPutPct">50%</span>
-        </div>
-      </div>
-    </section>
-
-    <!-- ═══ LAYER 4: STRUCTURE ENGINE ═══ -->
-    <section class="panel layer4" id="layer4">
-      <div class="panel-hdr">
-        <span class="layer-num">L4</span>
-        <span class="panel-title">STRUCTURE ENGINE</span>
-        <span class="panel-sub">Price Levels + VWAP + EMA</span>
-        <div class="panel-refresh" data-layer="4">↻</div>
-      </div>
-
-      <div class="struct-top">
-        <div class="struct-price-block">
-          <div class="spb-label">CURRENT PRICE</div>
-          <div class="spb-price" id="structPrice">--</div>
-          <div class="spb-change" id="structChange">-- | --%</div>
-        </div>
-        <div class="struct-bias">
-          <div class="sb-label">PRICE BIAS</div>
-          <div class="sb-val" id="structBias">--</div>
-        </div>
-      </div>
-
-      <!-- LEVEL STACK -->
-      <div class="level-stack" id="levelStack">
-        <div class="ls-loading">Loading structure levels…</div>
-      </div>
-
-      <!-- TECHNICAL INDICATORS -->
-      <div class="tech-indicators">
-        <div class="ti-row">
-          <div class="ti-item">
-            <div class="ti-label">EMA 20</div>
-            <div class="ti-val" id="ema20">--</div>
-            <div class="ti-rel" id="ema20rel">--</div>
-          </div>
-          <div class="ti-item">
-            <div class="ti-label">EMA 50</div>
-            <div class="ti-val" id="ema50">--</div>
-            <div class="ti-rel" id="ema50rel">--</div>
-          </div>
-          <div class="ti-item">
-            <div class="ti-label">RSI (14)</div>
-            <div class="ti-val" id="rsi14">--</div>
-            <div class="ti-rel" id="rsiSignal">--</div>
-          </div>
-          <div class="ti-item">
-            <div class="ti-label">MACD HIST</div>
-            <div class="ti-val" id="macdVal">--</div>
-            <div class="ti-sub-val" id="macdLine" style="font-size:9px;color:var(--text3);margin-top:1px;">--</div>
-            <div class="ti-rel" id="macdSignal">--</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- KEY LEVELS TABLE -->
-      <div class="key-levels-wrap">
-        <div class="kl-title">KEY STRUCTURE LEVELS</div>
-        <div class="kl-grid" id="keyLevelsGrid">
-          <div class="kl-row header"><span>LEVEL</span><span>PRICE</span><span>TYPE</span><span>STATUS</span></div>
-          <div class="kl-row" id="kl-pwh"><span>MAX PAIN / γ</span><span id="klPWH">--</span><span class="yellow" style="color:var(--yellow)">KEY LEVEL</span><span id="klPWHs">--</span></div>
-          <div class="kl-row" id="kl-pdh"><span>PREV DAY HIGH</span><span id="klPDH">--</span><span class="res">RESISTANCE</span><span id="klPDHs">--</span></div>
-          <div class="kl-row" id="kl-cur"><span>▶ CURRENT</span><span id="klCUR" class="accent">--</span><span>--</span><span>--</span></div>
-          <div class="kl-row" id="kl-pdl"><span>PREV DAY LOW</span><span id="klPDL">--</span><span class="sup">SUPPORT</span><span id="klPDLs">--</span></div>
-          <div class="kl-row" id="kl-pwl"><span>PUT WALL / OI</span><span id="klPWL">--</span><span class="sup">OI SUPPORT</span><span id="klPWLs">--</span></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ═══ LAYER 5: PLAYBOOK ENGINE ═══ -->
-    <section class="panel layer5" id="layer5">
-      <div class="panel-hdr">
-        <span class="layer-num">L5</span>
-        <span class="panel-title">PLAYBOOK ENGINE</span>
-        <span class="panel-sub">Setup Classification + Probability Map</span>
-        <div class="panel-refresh" data-layer="5">↻</div>
-      </div>
-
-      <!-- ACTIVE SETUP CARD -->
-      <div class="active-setup" id="activeSetup">
-        <div class="as-glow"></div>
-        <div class="as-label">ACTIVE SETUP</div>
-        <div class="as-name" id="asName">SCANNING…</div>
-        <div class="as-desc" id="asDesc">Analyzing confluence layers…</div>
-        <div class="as-confidence">
-          <span class="asc-label">CONFLUENCE SCORE</span>
-          <div class="asc-bar">
-            <div class="asc-fill" id="ascFill" style="width:0%"></div>
-          </div>
-          <span class="asc-pct" id="ascPct">0%</span>
-        </div>
-      </div>
-
-      <!-- PLAYBOOK CARDS -->
-      <div class="playbook-grid">
-        <div class="pb-card" id="pbc-firecracker" title="Cheap expansion play">
-          <div class="pbc-icon">🔥</div>
-          <div class="pbc-name">FIRECRACKER</div>
-          <div class="pbc-sub">Cheap Expansion</div>
-          <div class="pbc-status" id="pbs-firecracker">--</div>
-        </div>
-        <div class="pb-card" id="pbc-trifecta" title="Multi-layer confluence">
-          <div class="pbc-icon">⬡</div>
-          <div class="pbc-name">TRIFECTA</div>
-          <div class="pbc-sub">Multi-Layer</div>
-          <div class="pbc-status" id="pbs-trifecta">--</div>
-        </div>
-        <div class="pb-card" id="pbc-magnet" title="Price moving toward wall">
-          <div class="pbc-icon">⚡</div>
-          <div class="pbc-name">MAGNET RUN</div>
-          <div class="pbc-sub">Wall Attraction</div>
-          <div class="pbc-status" id="pbs-magnet">--</div>
-        </div>
-        <div class="pb-card" id="pbc-pin" title="Chop expected near max pain">
-          <div class="pbc-icon">📍</div>
-          <div class="pbc-name">PIN RISK</div>
-          <div class="pbc-sub">Chop Expected</div>
-          <div class="pbc-status" id="pbs-pin">--</div>
-        </div>
-        <div class="pb-card" id="pbc-gamma" title="Trend acceleration">
-          <div class="pbc-icon">↑</div>
-          <div class="pbc-name">GAMMA EXP</div>
-          <div class="pbc-sub">Acceleration</div>
-          <div class="pbc-status" id="pbs-gamma">--</div>
-        </div>
-        <div class="pb-card" id="pbc-cascade" title="Fast move potential">
-          <div class="pbc-icon">⛓</div>
-          <div class="pbc-name">CASCADE</div>
-          <div class="pbc-sub">Fast Move</div>
-          <div class="pbc-status" id="pbs-cascade">--</div>
-        </div>
-      </div>
-
-      <!-- PROBABILITY MAP -->
-      <div class="prob-map">
-        <div class="pm-title">PROBABILITY MAP</div>
-        <div class="pm-scenarios">
-          <div class="pm-scenario bull">
-            <div class="pm-s-label">▲ BULL SCENARIO</div>
-            <div class="pm-s-path" id="pmBullPath">-- → -- → --</div>
-            <div class="pm-s-cond" id="pmBullCond">Loading conditions…</div>
-            <div class="pm-s-prob">
-              <div class="pm-s-bar">
-                <div class="pm-s-fill bull-fill" id="pmBullFill" style="width:50%"></div>
-              </div>
-              <span id="pmBullPct">50%</span>
-            </div>
-          </div>
-          <div class="pm-scenario bear">
-            <div class="pm-s-label">▼ BEAR SCENARIO</div>
-            <div class="pm-s-path" id="pmBearPath">-- → -- → --</div>
-            <div class="pm-s-cond" id="pmBearCond">Loading conditions…</div>
-            <div class="pm-s-prob">
-              <div class="pm-s-bar">
-                <div class="pm-s-fill bear-fill" id="pmBearFill" style="width:50%"></div>
-              </div>
-              <span id="pmBearPct">50%</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ALERT LOG -->
-      <div class="alert-log-wrap">
-        <div class="al-title">SIGNAL LOG <span style="color:var(--text3);font-weight:400;">— last 60 events</span></div>
-        <div class="alert-log" id="alertLog" style="max-height:140px;">
-          <div class="al-entry init">INSTMAP v2.3 ready. Enter API key and click SCAN.</div>
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- MARKET CLOSED SESSION NOTICE -->
-  <div class="session-notice" id="sessionNotice" style="display:none;">
-    <span>⚠ MARKET CLOSED</span>
-    <span>Displaying previous session data — option chain OI is current, prices are prev close</span>
+  <div class="card">
+    <h2>Relative Strength</h2>
+    <div id="rsScore" class="score">--</div>
   </div>
 
-  <!-- FOOTER -->
-  <footer class="dash-footer">
-    <span>INSTMAP v2.3 · Polygon.io Options Plan · Not financial advice · Educational use only</span>
-    <span id="lastUpdate">Last update: --</span>
-    <span id="apiCounter" style="color:var(--text3);font-size:9px;">API calls: 0</span>
-    <span>Refresh: <span id="refreshCountdown">--</span>s</span>
-  </footer>
+  <div class="card">
+    <h2>Final Signal</h2>
+    <div id="finalSignal">Waiting...</div>
+  </div>
+</div>
 
-  <script src="dashboard.js"></script>
+<h2>Institutional Read</h2>
+<div id="summary" class="summary">Waiting...</div>
+
+<h2>Metrics</h2>
+<div id="metrics" class="grid"></div>
+
+<div class="card">
+  <h2>Error Log</h2>
+  <pre id="errors">None</pre>
+</div>
+
+<script>
+let API_KEY = localStorage.getItem("FINNHUB_API_KEY") || "";
+let LAST_SYMBOL = localStorage.getItem("EXPANSION_SYMBOL") || "";
+let LAST_BENCHMARK = localStorage.getItem("EXPANSION_BENCHMARK") || "QQQ";
+
+document.getElementById("apiKeyInput").value = API_KEY;
+document.getElementById("symbolInput").value = LAST_SYMBOL;
+document.getElementById("benchmarkInput").value = LAST_BENCHMARK;
+
+function setStatus(msg){ document.getElementById("status").innerText = msg; }
+function setError(msg){ document.getElementById("errors").innerText = msg || "None"; }
+function sleep(ms){ return new Promise(resolve => setTimeout(resolve, ms)); }
+
+function saveAndRun() {
+  API_KEY = document.getElementById("apiKeyInput").value.trim();
+  const symbol = document.getElementById("symbolInput").value.trim().toUpperCase();
+  const benchmark = document.getElementById("benchmarkInput").value;
+
+  if (!API_KEY) return setStatus("Paste your Finnhub API key first.");
+  if (!symbol) return setStatus("Enter a symbol first.");
+
+  localStorage.setItem("FINNHUB_API_KEY", API_KEY);
+  localStorage.setItem("EXPANSION_SYMBOL", symbol);
+  localStorage.setItem("EXPANSION_BENCHMARK", benchmark);
+
+  run(symbol, benchmark);
+}
+
+function clearInputs() {
+  localStorage.removeItem("EXPANSION_SYMBOL");
+  document.getElementById("symbolInput").value = "";
+  setStatus("Symbol cleared.");
+}
+
+async function finnhubQuote(symbol) {
+  const url = `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${encodeURIComponent(API_KEY)}`;
+  const r = await fetch(url);
+  const data = await r.json();
+
+  if (!r.ok || data.error) {
+    throw new Error(`${symbol} quote error: ${JSON.stringify(data, null, 2)}`);
+  }
+
+  return {
+    symbol,
+    current: data.c || 0,
+    change: data.d || 0,
+    changePercent: data.dp || 0,
+    high: data.h || 0,
+    low: data.l || 0,
+    open: data.o || 0,
+    prevClose: data.pc || 0,
+    timestamp: data.t || 0
+  };
+}
+
+async function finnhubCandles(symbol, resolution="D", daysBack=80) {
+  const now = Math.floor(Date.now() / 1000);
+  const from = now - daysBack * 86400;
+
+  const url =
+    `https://finnhub.io/api/v1/stock/candle?symbol=${encodeURIComponent(symbol)}&resolution=${resolution}&from=${from}&to=${now}&token=${encodeURIComponent(API_KEY)}`;
+
+  const r = await fetch(url);
+  const data = await r.json();
+
+  if (!r.ok || data.s === "no_data" || data.error) {
+    throw new Error(`${symbol} candle error: ${JSON.stringify(data, null, 2)}`);
+  }
+
+  const bars = [];
+  for (let i = 0; i < data.c.length; i++) {
+    bars.push({
+      time: data.t[i],
+      open: data.o[i],
+      high: data.h[i],
+      low: data.l[i],
+      close: data.c[i],
+      volume: data.v[i]
+    });
+  }
+
+  return bars;
+}
+
+function average(arr) {
+  if (!arr.length) return 0;
+  return arr.reduce((a,b) => a + b, 0) / arr.length;
+}
+
+function adr20(bars) {
+  const recent = bars.slice(-20);
+  const ranges = recent.map(b => ((b.high - b.low) / b.close) * 100);
+  return average(ranges);
+}
+
+function avgVolume20(bars) {
+  return average(bars.slice(-20).map(b => b.volume || 0));
+}
+
+function changeOverBars(bars, lookback) {
+  if (bars.length <= lookback) return 0;
+  const current = bars[bars.length - 1].close;
+  const past = bars[bars.length - 1 - lookback].close;
+  return ((current - past) / past) * 100;
+}
+
+function scoreADR(adr) {
+  if (adr >= 5) return 100;
+  if (adr >= 4) return 85;
+  if (adr >= 3) return 70;
+  if (adr >= 2) return 50;
+  return 25;
+}
+
+function scoreExpansionUsed(expansionUsed) {
+  if (expansionUsed <= 35) return 100;
+  if (expansionUsed <= 55) return 80;
+  if (expansionUsed <= 75) return 60;
+  if (expansionUsed <= 100) return 40;
+  return 15;
+}
+
+function scoreDollarVol(dollarVol) {
+  if (dollarVol >= 5_000_000_000) return 100;
+  if (dollarVol >= 1_000_000_000) return 85;
+  if (dollarVol >= 500_000_000) return 70;
+  if (dollarVol >= 100_000_000) return 50;
+  return 20;
+}
+
+function scoreRVOL(rvol) {
+  if (rvol >= 3) return 100;
+  if (rvol >= 2) return 85;
+  if (rvol >= 1.5) return 70;
+  if (rvol >= 1) return 50;
+  return 25;
+}
+
+function scoreRS(stockChange, benchmarkChange) {
+  const spread = stockChange - benchmarkChange;
+  if (spread >= 5) return 100;
+  if (spread >= 3) return 85;
+  if (spread >= 1.5) return 70;
+  if (spread >= 0) return 55;
+  if (spread >= -1.5) return 35;
+  return 15;
+}
+
+function classForScore(score) {
+  if (score >= 75) return "good";
+  if (score >= 50) return "warn";
+  return "bad";
+}
+
+function finalSignal(expansionScore, rsScore, expansionUsed) {
+  if (expansionScore >= 80 && rsScore >= 70 && expansionUsed <= 75) {
+    return "A+ EXPANSION CANDIDATE";
+  }
+  if (expansionScore >= 65 && rsScore >= 55) {
+    return "WATCHLIST / WAIT FOR SETUP";
+  }
+  if (expansionUsed > 100) {
+    return "MOVE ALREADY EXTENDED";
+  }
+  return "LOW PRIORITY";
+}
+
+function formatLarge(num) {
+  if (num >= 1_000_000_000) return `$${(num / 1_000_000_000).toFixed(2)}B`;
+  if (num >= 1_000_000) return `$${(num / 1_000_000).toFixed(2)}M`;
+  return `$${num.toFixed(0)}`;
+}
+
+async function run(symbol, benchmark) {
+  try {
+    setError("");
+    setStatus(`Loading ${symbol} expansion data...`);
+
+    const quote = await finnhubQuote(symbol);
+    await sleep(350);
+    const bars = await finnhubCandles(symbol);
+    await sleep(350);
+    const benchQuote = await finnhubQuote(benchmark);
+    await sleep(350);
+    const benchBars = await finnhubCandles(benchmark);
+
+    const adr = adr20(bars);
+    const todayRange = ((quote.high - quote.low) / quote.current) * 100;
+    const expansionUsed = adr ? (todayRange / adr) * 100 : 0;
+
+    const avgVol = avgVolume20(bars);
+    const latestVol = bars[bars.length - 1]?.volume || 0;
+    const rvol = avgVol ? latestVol / avgVol : 0;
+    const dollarVol = quote.current * latestVol;
+
+    const stock5d = changeOverBars(bars, 5);
+    const stock20d = changeOverBars(bars, 20);
+    const bench5d = changeOverBars(benchBars, 5);
+    const bench20d = changeOverBars(benchBars, 20);
+
+    const rs5Spread = stock5d - bench5d;
+    const rs20Spread = stock20d - bench20d;
+
+    const adrScore = scoreADR(adr);
+    const expansionRoomScore = scoreExpansionUsed(expansionUsed);
+    const dollarVolScore = scoreDollarVol(dollarVol);
+    const rvolScore = scoreRVOL(rvol);
+    const rs5Score = scoreRS(stock5d, bench5d);
+    const rs20Score = scoreRS(stock20d, bench20d);
+
+    const expansionScore = Math.round(
+      adrScore * 0.35 +
+      expansionRoomScore * 0.30 +
+      dollarVolScore * 0.20 +
+      rvolScore * 0.15
+    );
+
+    const rsScore = Math.round(
+      rs5Score * 0.60 +
+      rs20Score * 0.40
+    );
+
+    const signal = finalSignal(expansionScore, rsScore, expansionUsed);
+
+    document.getElementById("expansionScore").innerHTML =
+      `<span class="${classForScore(expansionScore)}">${expansionScore}</span>`;
+
+    document.getElementById("rsScore").innerHTML =
+      `<span class="${classForScore(rsScore)}">${rsScore}</span>`;
+
+    document.getElementById("finalSignal").innerHTML =
+      `<h2 class="${classForScore(Math.max(expansionScore, rsScore))}">${signal}</h2>
+       <p class="muted">${symbol} vs ${benchmark}</p>`;
+
+    document.getElementById("summary").innerHTML = `
+      <h2>${symbol} Expansion Read</h2>
+      <p><strong>Final Signal:</strong> ${signal}</p>
+      <p><strong>ADR20:</strong> ${adr.toFixed(2)}%</p>
+      <p><strong>Today Range:</strong> ${todayRange.toFixed(2)}%</p>
+      <p><strong>Expansion Used:</strong> ${expansionUsed.toFixed(0)}%</p>
+      <p><strong>Relative Strength:</strong> ${symbol} is ${rs5Spread >= 0 ? "outperforming" : "underperforming"} ${benchmark} by ${rs5Spread.toFixed(2)}% over 5 sessions.</p>
+      <p><strong>Institutional Interpretation:</strong>
+        ${
+          expansionScore >= 80 && rsScore >= 70
+          ? "High-quality expansion candidate. If Regime is aligned, this deserves setup/contract review."
+          : expansionUsed > 100
+          ? "The move may already be extended. Avoid chasing unless there is clean consolidation or fresh catalyst."
+          : "Not yet an A+ expansion candidate. Monitor for compression, stronger volume, or relative strength improvement."
+        }
+      </p>
+    `;
+
+    document.getElementById("metrics").innerHTML = `
+      <div class="card">
+        <h2>Price / Range</h2>
+        <p>Current: $${quote.current.toFixed(2)}</p>
+        <p>Open: $${quote.open.toFixed(2)}</p>
+        <p>High / Low: $${quote.high.toFixed(2)} / $${quote.low.toFixed(2)}</p>
+        <p>Day Change: <span class="${quote.changePercent >= 0 ? "good" : "bad"}">${quote.changePercent.toFixed(2)}%</span></p>
+      </div>
+
+      <div class="card">
+        <h2>ADR Expansion</h2>
+        <p>ADR20: ${adr.toFixed(2)}%</p>
+        <p>Today Range: ${todayRange.toFixed(2)}%</p>
+        <p>Expansion Used: ${expansionUsed.toFixed(0)}%</p>
+        <p>Expansion Room Score: ${expansionRoomScore}/100</p>
+      </div>
+
+      <div class="card">
+        <h2>Liquidity / RVOL</h2>
+        <p>Volume: ${latestVol.toLocaleString()}</p>
+        <p>Avg Vol 20D: ${Math.round(avgVol).toLocaleString()}</p>
+        <p>RVOL: ${rvol.toFixed(2)}x</p>
+        <p>Dollar Vol: ${formatLarge(dollarVol)}</p>
+      </div>
+
+      <div class="card">
+        <h2>Relative Strength</h2>
+        <p>${symbol} 5D: ${stock5d.toFixed(2)}%</p>
+        <p>${benchmark} 5D: ${bench5d.toFixed(2)}%</p>
+        <p>5D Spread: ${rs5Spread.toFixed(2)}%</p>
+        <p>20D Spread: ${rs20Spread.toFixed(2)}%</p>
+      </div>
+
+      <div class="card">
+        <h2>Score Breakdown</h2>
+        <p>ADR Score: ${adrScore}/100</p>
+        <p>Expansion Room: ${expansionRoomScore}/100</p>
+        <p>Dollar Vol: ${dollarVolScore}/100</p>
+        <p>RVOL: ${rvolScore}/100</p>
+      </div>
+
+      <div class="card">
+        <h2>Next Step</h2>
+        <p>
+          ${
+            signal.includes("A+")
+            ? "Run Firecracker Options next."
+            : signal.includes("WATCHLIST")
+            ? "Wait for pullback/retest or intraday coil."
+            : "Do not force this ticker yet."
+          }
+        </p>
+      </div>
+    `;
+
+    setStatus(`${symbol} expansion scan loaded.`);
+  } catch (err) {
+    setStatus("Failed to load. Check Error Log.");
+    setError(err.message);
+  }
+}
+
+if (API_KEY && LAST_SYMBOL) {
+  run(LAST_SYMBOL, LAST_BENCHMARK);
+}
+</script>
+
 </body>
 </html>
