@@ -6,7 +6,7 @@
 
 <style>
 body{background:#0f172a;color:#e2e8f0;font-family:Arial,sans-serif;margin:0;padding:20px}
-.container{max-width:1500px;margin:auto}
+.container{max-width:1550px;margin:auto}
 h1{text-align:center}
 .panel{background:#1e293b;border-radius:12px;padding:15px;margin-bottom:15px}
 input,textarea,select{width:100%;padding:10px;border-radius:8px;border:none;margin:6px 0 12px}
@@ -15,10 +15,10 @@ button:hover{background:#1d4ed8}
 table{width:100%;border-collapse:collapse;font-size:14px}
 th{background:#0f172a}
 th,td{padding:9px;border-bottom:1px solid #334155;text-align:center}
-.s,.leader{color:#22c55e;font-weight:bold}
+.s,.leader,.bull{color:#22c55e;font-weight:bold}
 .a,.strong{color:#38bdf8;font-weight:bold}
-.b,.weak{color:#facc15;font-weight:bold}
-.c,.laggard{color:#ef4444;font-weight:bold}
+.b,.weak,.neutral{color:#facc15;font-weight:bold}
+.c,.laggard,.bear,.trap{color:#ef4444;font-weight:bold}
 .log{font-size:12px;white-space:pre-wrap;color:#cbd5e1}
 .small{font-size:13px;color:#94a3b8}
 </style>
@@ -43,9 +43,9 @@ th,td{padding:9px;border-bottom:1px solid #334155;text-align:center}
 
 <label>Request Delay</label>
 <select id="delay">
-<option value="800" selected>Normal - 0.8 sec between symbols</option>
-<option value="1500">Safer - 1.5 sec between symbols</option>
-<option value="2500">Very Safe - 2.5 sec between symbols</option>
+<option value="800" selected>Normal - 0.8 sec</option>
+<option value="1500">Safer - 1.5 sec</option>
+<option value="2500">Very Safe - 2.5 sec</option>
 </select>
 
 <label>Symbols</label>
@@ -61,7 +61,7 @@ SMCI
 <button onclick="runScan()">RUN SCAN</button>
 
 <p class="small">
-429 errors mean rate limit. Use Safer / Very Safe delay or scan fewer symbols.
+Bias logic: bullish only when expansion + positive RS + close near high. Bearish when expansion + negative RS + close near low.
 </p>
 </div>
 
@@ -172,11 +172,67 @@ function rsLabel(rs){
     return "LAGGARD";
 }
 
-function grade(expansion, rs, vol){
+function closeLocation(close, high, low){
 
-    if(expansion >= 120 && rs >= 2 && vol >= 1.5) return "S";
-    if(expansion >= 100 && rs >= 1 && vol >= 1.2) return "A";
-    if(expansion >= 80 && rs >= 0) return "B";
+    const range = high - low;
+
+    if(range <= 0){
+        return 50;
+    }
+
+    return ((close - low) / range) * 100;
+}
+
+function getBias(expansion, rs, closeLoc){
+
+    if(expansion >= 100 && rs > 0 && closeLoc >= 70){
+        return {
+            text:"BULLISH EXPANSION",
+            cls:"bull"
+        };
+    }
+
+    if(expansion >= 100 && rs < 0 && closeLoc <= 35){
+        return {
+            text:"BEARISH EXPANSION",
+            cls:"bear"
+        };
+    }
+
+    if(expansion >= 100 && rs < 0){
+        return {
+            text:"EXPANSION TRAP",
+            cls:"trap"
+        };
+    }
+
+    if(expansion >= 80 && rs > 0){
+        return {
+            text:"WATCH BULLISH",
+            cls:"neutral"
+        };
+    }
+
+    return {
+        text:"NEUTRAL / WAIT",
+        cls:"neutral"
+    };
+}
+
+function grade(expansion, rs, vol, closeLoc){
+
+    if(expansion >= 120 && rs >= 2 && vol >= 1.5 && closeLoc >= 70){
+        return "S";
+    }
+
+    if(expansion >= 100 && rs >= 1 && vol >= 1.2 && closeLoc >= 60){
+        return "A";
+    }
+
+    if(expansion >= 80 && rs >= 0){
+        return "B";
+    }
+
     return "C";
 }
 
@@ -192,10 +248,12 @@ function render(rows, benchmark){
 <th>Range</th>
 <th>ADR20</th>
 <th>Expansion%</th>
+<th>Close Loc%</th>
 <th>Stock Ret%</th>
 <th>${benchmark} Ret%</th>
 <th>RS</th>
 <th>RS Label</th>
+<th>Bias</th>
 <th>Vol Factor</th>
 <th>Grade</th>
 </tr>`;
@@ -210,10 +268,12 @@ function render(rows, benchmark){
 <td>${r.range}</td>
 <td>${r.adr}</td>
 <td>${r.expansion}%</td>
+<td>${r.closeLoc}%</td>
 <td>${r.stockReturn}%</td>
 <td>${r.benchmarkReturn}%</td>
 <td>${r.rs}%</td>
 <td class="${r.label.toLowerCase()}">${r.label}</td>
+<td class="${r.biasClass}">${r.bias}</td>
 <td>${r.volume}x</td>
 <td class="${r.grade.toLowerCase()}">${r.grade}</td>
 </tr>`;
@@ -291,7 +351,25 @@ async function runScan(){
             const volFactor = latest.v / avgVol;
 
             const label = rsLabel(rs);
-            const finalGrade = grade(expansion, rs, volFactor);
+
+            const closeLoc = closeLocation(
+                latest.c,
+                latest.h,
+                latest.l
+            );
+
+            const biasObj = getBias(
+                expansion,
+                rs,
+                closeLoc
+            );
+
+            const finalGrade = grade(
+                expansion,
+                rs,
+                volFactor,
+                closeLoc
+            );
 
             results.push({
                 symbol,
@@ -301,15 +379,27 @@ async function runScan(){
                 range:fmt(range,2),
                 adr:fmt(adr,2),
                 expansion:fmt(expansion,1),
+                closeLoc:fmt(closeLoc,0),
                 stockReturn:fmt(stockReturn,2),
                 benchmarkReturn:fmt(benchmarkReturn,2),
                 rs:fmt(rs,2),
                 label,
+                bias:biasObj.text,
+                biasClass:biasObj.cls,
                 volume:fmt(volFactor,2),
                 grade:finalGrade
             });
 
-            log(symbol + " OK | RS " + rs.toFixed(2) + "% | Expansion " + expansion.toFixed(1) + "%");
+            log(
+                symbol +
+                " OK | Bias: " +
+                biasObj.text +
+                " | RS " +
+                rs.toFixed(2) +
+                "% | Expansion " +
+                expansion.toFixed(1) +
+                "%"
+            );
 
         }catch(err){
             log(symbol + " ERROR -> " + err.message);
