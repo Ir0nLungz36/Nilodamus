@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hybrid Expansion Scanner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Mono:wght@400;700&family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#06070a;--panel:#0c0e13;--panel-2:#10131a;--line:#1b1f27;--txt:#e9ecf2;
+    --dim:#7b8497;--faint:#474e5d;--on:#1fe08a;--warm:#ffbe2e;--amber:#ff9d2e;
+    --info:#3da5ff;--def:#ff7a45;--off:#ff3b5c;--pos:#1fe08a;--neg:#ff3b5c;
+    --mono:'Space Mono',monospace;--disp:'Archivo Black',sans-serif;--sans:'Archivo',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{background:var(--bg);color:var(--txt);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+  body{background-image:radial-gradient(1000px 540px at 88% -12%,rgba(31,224,138,.06),transparent 60%),radial-gradient(820px 600px at -5% 118%,rgba(61,165,255,.05),transparent 55%);min-height:100vh;padding:22px}
+  ::selection{background:var(--on);color:#000}
+  .wrap{max-width:1360px;margin:0 auto}
+  header{display:flex;align-items:flex-end;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:15px;margin-bottom:18px;flex-wrap:wrap;gap:14px}
+  .brand{display:flex;align-items:baseline;gap:13px}
+  .brand h1{font-family:var(--disp);font-size:27px;letter-spacing:-1px;line-height:.9}
+  .brand h1 span{color:var(--on)}
+  .brand .sub{font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:2px;text-transform:uppercase}
+  .src-badge{font-family:var(--mono);font-size:10px;color:var(--info);border:1px solid rgba(61,165,255,.3);background:rgba(61,165,255,.08);padding:4px 9px;border-radius:6px}
+  .panel{background:linear-gradient(180deg,var(--panel),var(--panel-2));border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px}
+  .row{display:grid;grid-template-columns:1fr 160px 130px;gap:14px;margin-bottom:12px}
+  @media(max-width:780px){.row{grid-template-columns:1fr}}
+  label{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);display:block;margin-bottom:6px}
+  input,select,textarea{width:100%;background:#0a0c11;border:1px solid var(--line);color:var(--txt);font-family:var(--mono);font-size:13px;padding:10px 12px;border-radius:9px;outline:none}
+  input:focus,select:focus,textarea:focus{border-color:var(--on)}
+  textarea{resize:vertical;min-height:46px;text-transform:uppercase}
+  .btnrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  button.act{flex:1;background:var(--on);color:#000;border:none;font-family:var(--mono);font-weight:700;font-size:13px;letter-spacing:1px;padding:12px;border-radius:9px;cursor:pointer;text-transform:uppercase}
+  button.act:hover{filter:brightness(1.1)}button.act:disabled{opacity:.5;cursor:wait}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--dim);font-family:var(--mono);font-size:12px;padding:12px 16px;border-radius:9px;cursor:pointer}
+  button.ghost:hover{border-color:var(--dim);color:var(--txt)}
+  .biaslogic{font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:10px;line-height:1.5}
+  .status{font-family:var(--mono);font-size:11px;color:var(--faint);margin-bottom:14px;display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+  .dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:middle}
+  .dot.live{background:var(--on);box-shadow:0 0 8px var(--on)}.dot.err{background:var(--off)}.dot.run{background:var(--info);animation:pulse 1s infinite}.dot.idle{background:var(--warm)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  .bench-flag{font-family:var(--mono);font-size:11px;padding:9px 13px;border-radius:9px;margin-bottom:14px;display:none}
+  .bench-flag.warn{display:block;background:rgba(255,190,46,.08);border:1px solid rgba(255,190,46,.3);color:var(--warm)}
+  .bench-flag.ok{display:block;background:rgba(31,224,138,.06);border:1px solid rgba(31,224,138,.25);color:var(--on)}
+  .tablewrap{background:linear-gradient(180deg,var(--panel),var(--panel-2));border:1px solid var(--line);border-radius:14px;overflow:hidden;overflow-x:auto}
+  table{width:100%;border-collapse:collapse;min-width:1100px}
+  thead th{font-family:var(--mono);font-size:9px;letter-spacing:.8px;text-transform:uppercase;color:var(--dim);text-align:right;padding:13px 12px;border-bottom:1px solid var(--line);background:#0a0c11;cursor:pointer;white-space:nowrap;user-select:none}
+  thead th:first-child{text-align:left}thead th:hover{color:var(--txt)}thead th.sorted{color:var(--on)}
+  tbody td{font-family:var(--mono);font-size:13px;text-align:right;padding:12px;border-bottom:1px solid #13161c;white-space:nowrap}
+  tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:#0f1318}
+  td.sym{font-family:var(--disp);font-size:15px;text-align:left;letter-spacing:-.3px}
+  .up{color:var(--pos)}.down{color:var(--neg)}.flat{color:var(--dim)}
+  .pill{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:700;padding:4px 9px;border-radius:6px;letter-spacing:.3px}
+  .b-bull{background:rgba(31,224,138,.14);color:var(--on)}.b-bear{background:rgba(255,59,92,.14);color:var(--off)}
+  .b-trap{background:rgba(255,157,46,.14);color:var(--amber)}.b-neutral{background:rgba(124,133,151,.12);color:var(--dim)}.b-watch{background:rgba(61,165,255,.14);color:var(--info)}
+  .rs-leader{color:var(--on);font-weight:700}.rs-strong{color:#8fe3b5}.rs-weak{color:var(--warm)}.rs-laggard{color:var(--off)}
+  .grade{font-family:var(--disp);font-size:15px}.g-A{color:var(--on)}.g-B{color:var(--warm)}.g-C{color:var(--def)}.g-D{color:var(--off)}
+  .expbar{display:inline-block;width:46px;height:6px;border-radius:4px;background:#161a21;overflow:hidden;vertical-align:middle;margin-left:7px}.expbar i{display:block;height:100%}
+  .stale{opacity:.55}.stale td.sym::after{content:" ⚠";color:var(--warm)}
+  .empty{font-family:var(--mono);font-size:12px;color:var(--faint);text-align:center;padding:44px}
+  .errbox{margin-top:14px;font-family:var(--mono);font-size:11px;color:var(--off);background:rgba(255,59,92,.06);border:1px solid rgba(255,59,92,.25);border-radius:10px;padding:11px 14px;display:none;white-space:pre-wrap}
+  footer{margin-top:22px;border-top:1px solid var(--line);padding-top:14px;font-family:var(--mono);font-size:10px;color:var(--faint);line-height:1.7}
+  footer code{color:var(--dim)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1>HYBRID<span>·</span>EXPANSION</h1>
+      <span class="sub">Finnhub&nbsp;/quote&nbsp;live&nbsp;·&nbsp;ADR&nbsp;cached&nbsp;·&nbsp;RS&nbsp;fixed</span>
+    </div>
+    <span class="src-badge" id="srcBadge">live: Finnhub /quote · ADR: —</span>
+  </header>
+
+  <div class="panel">
+    <div class="row">
+      <div><label>Symbols</label><textarea id="syms" placeholder="MU, TSLA, AFRM, HOOD, NVDA, PLTR">MU, TSLA, AFRM, HOOD, NVDA, PLTR, UPS, MCD, AMZN</textarea></div>
+      <div><label>Benchmark</label>
+        <select id="bench">
+          <option value="QQQ">QQQ — Growth / Tech</option>
+          <option value="SPY">SPY — Broad Market</option>
+          <option value="IWM">IWM — Small Caps</option>
+        </select>
+      </div>
+      <div><label>Expansion Threshold</label>
+        <select id="expThresh">
+          <option value="100">100% — strict</option>
+          <option value="85">85% — lenient</option>
+          <option value="120">120% — big only</option>
+        </select>
+      </div>
+    </div>
+    <div class="btnrow">
+      <button class="act" id="run">Run Scan</button>
+      <button class="ghost" id="csv">Export CSV</button>
+    </div>
+    <div class="biaslogic">RS now = symbol.dp − benchmark.dp, both from Finnhub /quote (single live source). Bias: BULLISH = expansion + positive RS + close near high · BEARISH = expansion + negative RS + close near low · TRAP = expansion + mid close · NEUTRAL = no expansion · WATCH = leader RS, location unconfirmed.</div>
+  </div>
+
+  <div class="status">
+    <span id="sMode"><span class="dot idle"></span>Idle</span>
+    <span id="sBench">benchmark: —</span>
+    <span id="sCount">scanned: —</span>
+    <span id="sTime">updated: —</span>
+  </div>
+
+  <div class="bench-flag" id="benchFlag"></div>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr id="head"></tr></thead>
+      <tbody id="body"><tr><td class="empty" colspan="14">Set symbols, hit Run Scan. The relay must be running (node server.js).</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="errbox" id="errbox"></div>
+
+  <footer>
+    <div>Hybrid — <code>GET /quote?symbol=…</code> (live: c, dp, h, l, pc; key sent as X-Finnhub-Token header) · ADR20 from cached daily candles (Finnhub /stock/candle or Massive aggs, 30-min cache).</div>
+    <div style="margin-top:5px">Range% = (h − l) / c. Expansion% = Range% ÷ ADR20. RS = dp − benchmark dp. 429s parse Retry-After and back off; failed-bar rows flag stale (⚠) rather than showing old data. Not investment advice.</div>
+  </footer>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const fmt=(n,d=2)=>(n==null||isNaN(n))?"—":Number(n).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+
+/* classifier + grade (unchanged — always correct) */
+function rsLabel(rs){ if(rs==null)return{t:"—",c:"flat"}; if(rs>=2)return{t:"LEADER",c:"rs-leader"}; if(rs>=0)return{t:"STRONG",c:"rs-strong"}; if(rs>=-2)return{t:"WEAK",c:"rs-weak"}; return{t:"LAGGARD",c:"rs-laggard"}; }
+function classify({expansionPct,closeLoc,rs,thresh}){
+  const expanding=expansionPct!=null&&expansionPct>=thresh;
+  const nearHigh=closeLoc!=null&&closeLoc>=66, nearLow=closeLoc!=null&&closeLoc<=33, mid=closeLoc!=null&&!nearHigh&&!nearLow;
+  const posRS=rs!=null&&rs>0, negRS=rs!=null&&rs<0;
+  if(!expanding){ if(posRS&&nearHigh)return{bias:"WATCH BULLISH",cls:"b-watch"}; return{bias:"NEUTRAL / WAIT",cls:"b-neutral"}; }
+  if(nearHigh&&posRS)return{bias:"BULLISH EXPANSION",cls:"b-bull"};
+  if(nearLow&&negRS)return{bias:"BEARISH EXPANSION",cls:"b-bear"};
+  if(nearHigh&&negRS)return{bias:"WATCH BULLISH",cls:"b-watch"};
+  if(nearLow&&posRS)return{bias:"BEARISH EXPANSION",cls:"b-bear"};
+  if(mid)return{bias:"EXPANSION TRAP",cls:"b-trap"};
+  return nearHigh?{bias:"WATCH BULLISH",cls:"b-watch"}:{bias:"NEUTRAL / WAIT",cls:"b-neutral"};
+}
+function grade({expansionPct,closeLoc,rs,bias}){
+  let s=0; if(expansionPct>=100)s+=20; if(expansionPct>=150)s+=10;
+  if(bias==="BULLISH EXPANSION"){s+=30;if(closeLoc>=85)s+=10;if(rs>=2)s+=15;}
+  else if(bias==="WATCH BULLISH"){s+=18;if(rs>=2)s+=12;}
+  else if(bias==="BEARISH EXPANSION"){s+=8;} else if(bias==="EXPANSION TRAP"){s+=4;}
+  if(rs!=null)s+=clamp(rs*1.5,-10,15);
+  s=clamp(s,0,100);
+  return {g:s>=72?"A":s>=55?"B":s>=35?"C":"D", score:Math.round(s)};
+}
+
+let ROWS=[], sortKey="expansionPct", sortDir=-1;
+const COLS=[
+  {k:"sym",label:"Symbol",cls:"sym"},
+  {k:"price",label:"Price",f:r=>"$"+fmt(r.price,2)},
+  {k:"high",label:"High",f:r=>"$"+fmt(r.high,2)},
+  {k:"low",label:"Low",f:r=>"$"+fmt(r.low,2)},
+  {k:"rangePct",label:"Range%",f:r=>fmt(r.rangePct,2)},
+  {k:"adr",label:"ADR20",f:r=>fmt(r.adr,2)},
+  {k:"expansionPct",label:"Expansion%",special:"exp"},
+  {k:"closeLoc",label:"Close Loc%",f:r=>r.closeLoc==null?"—":Math.round(r.closeLoc)+"%",color:r=>r.closeLoc>=66?"up":r.closeLoc<=33?"down":"flat"},
+  {k:"stockRet",label:"Stock Ret%",f:r=>r.stockRet==null?"—":(r.stockRet>=0?"+":"")+fmt(r.stockRet,2)+"%",color:r=>r.stockRet>=0?"up":"down"},
+  {k:"benchRet",label:"Bench Ret%",f:r=>r.benchRet==null?"—":(r.benchRet>=0?"+":"")+fmt(r.benchRet,2)+"%",color:r=>r.benchRet>=0?"up":"down"},
+  {k:"rs",label:"RS",f:r=>r.rs==null?"—":(r.rs>=0?"+":"")+fmt(r.rs,2)+"%",color:r=>r.rs>=0?"up":"down"},
+  {k:"rsLabel",label:"RS Label",special:"rs"},
+  {k:"bias",label:"Bias",special:"bias"},
+  {k:"grade",label:"Grade",special:"grade"},
+];
+function renderHead(){
+  $("head").innerHTML=COLS.map(c=>`<th data-k="${c.k}" class="${sortKey===c.k?'sorted':''}">${c.label}${sortKey===c.k?(sortDir>0?' ↑':' ↓'):''}</th>`).join("");
+  document.querySelectorAll("#head th").forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=(k==="sym"?1:-1);}paint();});
+}
+function paint(){
+  renderHead();
+  if(!ROWS.length){$("body").innerHTML=`<tr><td class="empty" colspan="${COLS.length}">No results.</td></tr>`;return;}
+  const rows=[...ROWS].sort((a,b)=>{let x=a[sortKey],y=b[sortKey];
+    if(sortKey==="bias"||sortKey==="rsLabel"){x=a[sortKey]?.t??a[sortKey]?.bias;y=b[sortKey]?.t??b[sortKey]?.bias;}
+    if(sortKey==="grade"){x=a.grade.score;y=b.grade.score;}
+    if(x==null)x=sortDir>0?Infinity:-Infinity;if(y==null)y=sortDir>0?Infinity:-Infinity;
+    if(typeof x==="string")return sortDir*String(x).localeCompare(String(y));
+    return sortDir*((x>y?1:x<y?-1:0));});
+  $("body").innerHTML=rows.map(r=>{
+    const tds=COLS.map(c=>{
+      if(c.special==="exp"){const e=r.expansionPct;const w=clamp((e||0)/2,0,100);const col=e>=150?"var(--off)":e>=100?"var(--warm)":"var(--on)";return `<td>${e==null?"—":fmt(e,1)+"%"}<span class="expbar"><i style="width:${w}%;background:${col}"></i></span></td>`;}
+      if(c.special==="rs"){const l=rsLabel(r.rs);return `<td><span class="${l.c}">${l.t}</span></td>`;}
+      if(c.special==="bias"){return `<td><span class="pill ${r.bias.cls}">${r.bias.bias}</span></td>`;}
+      if(c.special==="grade"){return `<td><span class="grade g-${r.grade.g}">${r.grade.g}</span></td>`;}
+      const v=c.f?c.f(r):r[c.k];const col=c.color?c.color(r):"";const extra=c.cls||"";
+      return `<td class="${extra} ${col}">${v}</td>`;
+    }).join("");
+    return `<tr class="${r.barsKnown?'':'stale'}">${tds}</tr>`;
+  }).join("");
+}
+function setStatus(m,msg){const c=m==="live"?"live":m==="err"?"err":m==="run"?"run":"idle";$("sMode").innerHTML=`<span class="dot ${c}"></span>${msg}`;}
+
+async function runScan(){
+  const syms=$("syms").value.toUpperCase().split(/[,\s]+/).map(s=>s.trim()).filter(Boolean);
+  const bench=$("bench").value, thresh=+$("expThresh").value;
+  if(!syms.length){setStatus("err","Enter symbols");return;}
+  $("run").disabled=true; setStatus("run","Scanning via relay…"); $("errbox").style.display="none";
+  try{
+    const r=await fetch(`/api/scan?symbols=${encodeURIComponent(syms.join(","))}&benchmark=${bench}&delay=300`,{cache:"no-store"});
+    if(!r.ok) throw new Error("relay "+r.status+" (is server.js running?)");
+    const st=await r.json();
+    // build display rows + classify client-side with chosen threshold
+    ROWS=Object.values(st.rows||{}).map(row=>{
+      const bias=classify({expansionPct:row.expansionPct,closeLoc:row.closeLoc,rs:row.rs,thresh});
+      const gr=grade({expansionPct:row.expansionPct,closeLoc:row.closeLoc,rs:row.rs,bias:bias.bias});
+      return {...row,bias,grade:gr};
+    });
+    // benchmark banner
+    const bf=$("benchFlag");
+    if(st.benchOk){bf.className="bench-flag ok";bf.textContent=`✓ Benchmark ${st.benchmark} ${st.benchDp>=0?"+":""}${fmt(st.benchDp,2)}% — live from /quote, validated.`;}
+    else{bf.className="bench-flag warn";bf.textContent=`⚠ Benchmark issue: ${st.benchReason||"unavailable"}. RS suppressed until benchmark is valid.`;}
+    $("sBench").textContent=`benchmark: ${st.benchmark} ${st.benchDp==null?"—":(st.benchDp>=0?"+":"")+fmt(st.benchDp,2)+"%"}`;
+    $("sCount").textContent=`scanned: ${ROWS.length}/${syms.length}`;
+    $("sTime").textContent="updated: "+new Date().toLocaleTimeString();
+    $("srcBadge").textContent=`live: Finnhub /quote · ADR: ${st.adrSource}`;
+    if(st.errors&&st.errors.length){$("errbox").style.display="block";$("errbox").textContent="relay notes:\n"+st.errors.join("\n");}
+    setStatus("live",`Done · ${ROWS.length} symbols`);
+    paint();
+  }catch(e){
+    setStatus("err","Scan failed");
+    $("errbox").style.display="block";$("errbox").textContent="Error: "+e.message;
+  }finally{$("run").disabled=false;}
+}
+function exportCSV(){
+  if(!ROWS.length)return;
+  const head=["Symbol","Price","High","Low","Range%","ADR20","Expansion%","CloseLoc%","StockRet%","BenchRet%","RS","RSLabel","Bias","Grade","BarsKnown"];
+  const lines=ROWS.map(r=>[r.sym,r.price,r.high,r.low,fmt(r.rangePct,2),fmt(r.adr,2),fmt(r.expansionPct,1),r.closeLoc==null?"":Math.round(r.closeLoc),fmt(r.stockRet,2),fmt(r.benchRet,2),fmt(r.rs,2),rsLabel(r.rs).t,r.bias.bias,r.grade.g,r.barsKnown].join(","));
+  const blob=new Blob([head.join(",")+"\n"+lines.join("\n")],{type:"text/csv"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`hybrid_scan_${new Date().toISOString().slice(0,10)}.csv`;a.click();
+}
+$("run").addEventListener("click",runScan);
+$("csv").addEventListener("click",exportCSV);
+renderHead();
+</script>
+</body>
+</html>
