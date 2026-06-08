@@ -5,7 +5,6 @@
 <title>Expansion + Relative Strength Portal</title>
 
 <style>
-
 body{
     background:#0f172a;
     color:#e2e8f0;
@@ -13,24 +12,20 @@ body{
     margin:0;
     padding:20px;
 }
-
 h1{
     text-align:center;
 }
-
 .container{
-    max-width:1400px;
+    max-width:1500px;
     margin:auto;
 }
-
 .panel{
     background:#1e293b;
     border-radius:12px;
     padding:15px;
     margin-bottom:15px;
 }
-
-input, textarea{
+input, textarea, select{
     width:100%;
     padding:10px;
     border-radius:8px;
@@ -38,7 +33,6 @@ input, textarea{
     margin-top:5px;
     margin-bottom:10px;
 }
-
 button{
     background:#2563eb;
     color:white;
@@ -49,52 +43,63 @@ button{
     width:100%;
     font-weight:bold;
 }
-
 button:hover{
     background:#1d4ed8;
 }
-
 table{
     width:100%;
     border-collapse:collapse;
+    font-size:14px;
 }
-
 th{
     background:#0f172a;
     color:white;
 }
-
 th,td{
-    padding:10px;
+    padding:9px;
     border-bottom:1px solid #334155;
     text-align:center;
 }
-
 .s{
     color:#22c55e;
     font-weight:bold;
 }
-
 .a{
     color:#38bdf8;
     font-weight:bold;
 }
-
 .b{
     color:#facc15;
     font-weight:bold;
 }
-
 .c{
     color:#ef4444;
     font-weight:bold;
 }
-
+.leader{
+    color:#22c55e;
+    font-weight:bold;
+}
+.strong{
+    color:#38bdf8;
+    font-weight:bold;
+}
+.weak{
+    color:#facc15;
+    font-weight:bold;
+}
+.laggard{
+    color:#ef4444;
+    font-weight:bold;
+}
 .log{
     font-size:12px;
     white-space:pre-wrap;
 }
-
+.small{
+    color:#94a3b8;
+    font-size:13px;
+}
 </style>
 </head>
 
@@ -102,55 +107,44 @@ th,td{
 
 <div class="container">
 
-<h1>
-ADR Expansion + Relative Strength Dashboard
-</h1>
+<h1>ADR Expansion + Relative Strength Portal</h1>
 
 <div class="panel">
 
 <label>Massive API Key</label>
+<input type="password" id="apiKey" placeholder="Paste Massive API Key">
 
-<input
-type="password"
-id="apiKey"
-placeholder="Paste Massive API Key">
+<label>Benchmark</label>
+<select id="benchmark">
+    <option value="QQQ" selected>QQQ - Growth / Tech Benchmark</option>
+    <option value="SPY">SPY - Broad Market Benchmark</option>
+    <option value="IWM">IWM - Small Cap Benchmark</option>
+</select>
 
 <label>Symbols</label>
-
-<textarea
-id="symbols"
-rows="6">
-
+<textarea id="symbols" rows="6">
 NVDA,
 OPEN,
 SOFI,
 PLTR,
 BAC,
-SMCI,
-QQQ
-
+SMCI
 </textarea>
 
-<button onclick="runScan()">
-RUN SCAN
-</button>
+<button onclick="runScan()">RUN SCAN</button>
+
+<p class="small">
+Use QQQ for NVDA / PLTR / SOFI / OPEN / SMCI. Use SPY for broad market. Use IWM for small caps.
+</p>
 
 </div>
 
 <div class="panel">
-
-<div id="results">
-
-Waiting for scan...
-
-</div>
-
+<div id="results">Waiting for scan...</div>
 </div>
 
 <div class="panel">
-
 <div id="log" class="log"></div>
-
 </div>
 
 </div>
@@ -158,125 +152,150 @@ Waiting for scan...
 <script>
 
 function writeLog(text){
+    document.getElementById("log").innerHTML += text + "\\n";
+}
 
-    document
-    .getElementById("log")
-    .innerHTML += text + "\\n";
-
+function fmt(num, decimals=2){
+    if(num === null || num === undefined || isNaN(num)){
+        return "-";
+    }
+    return Number(num).toFixed(decimals);
 }
 
 async function getBars(symbol){
 
-    const apiKey =
-    document.getElementById("apiKey").value;
+    const apiKey = document.getElementById("apiKey").value.trim();
 
-    const end =
-    new Date()
-    .toISOString()
-    .split("T")[0];
+    if(!apiKey){
+        throw new Error("Missing API key");
+    }
 
-    const startDate =
-    new Date();
+    const end = new Date().toISOString().split("T")[0];
 
-    startDate.setDate(
-        startDate.getDate()-60
-    );
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 75);
 
-    const start =
-    startDate
-    .toISOString()
-    .split("T")[0];
+    const start = startDate.toISOString().split("T")[0];
 
     const url =
 `https://api.massive.com/v2/aggs/ticker/${symbol}/range/1/day/${start}/${end}?adjusted=true&sort=asc&limit=120&apikey=${apiKey}`;
 
-    const response =
-    await fetch(url);
+    const response = await fetch(url);
 
     if(!response.ok){
-
-        throw new Error(
-            "HTTP " + response.status
-        );
-
+        throw new Error("HTTP " + response.status);
     }
 
-    const data =
-    await response.json();
+    const data = await response.json();
 
-    return data.results || [];
+    if(!data.results || data.results.length < 2){
+        throw new Error("Not enough bar data");
+    }
 
+    return data.results;
 }
 
-function adr20(bars){
+function completedBarsOnly(bars){
 
-    const last =
-    bars.slice(-20);
+    /*
+      Massive daily aggregates may include today's still-forming bar.
+      That is useful for intraday expansion.
+      We keep it, but separate previous bars for ADR calculation.
+    */
+
+    return bars;
+}
+
+function calcADR20(bars){
+
+    /*
+      Use the 20 bars BEFORE the latest bar.
+      This prevents today's current range from contaminating ADR20.
+    */
+
+    const priorBars = bars.slice(-21, -1);
+
+    if(priorBars.length < 20){
+        return null;
+    }
 
     let total = 0;
 
-    last.forEach(x=>{
-
-        total +=
-        (x.h-x.l);
-
+    priorBars.forEach(bar=>{
+        total += (bar.h - bar.l);
     });
 
-    return total/last.length;
-
+    return total / priorBars.length;
 }
 
-function avgVol20(bars){
+function calcAvgVol20(bars){
 
-    const last =
-    bars.slice(-20);
+    /*
+      Uses the 20 bars BEFORE the latest bar.
+      Keeps today's live/incomplete volume out of the average.
+    */
+
+    const priorBars = bars.slice(-21, -1);
+
+    if(priorBars.length < 20){
+        return null;
+    }
 
     let total = 0;
 
-    last.forEach(x=>{
-
-        total += x.v;
-
+    priorBars.forEach(bar=>{
+        total += bar.v;
     });
 
-    return total/last.length;
-
+    return total / priorBars.length;
 }
 
-function grade(
-    expansion,
-    rs,
-    volume
-){
+function rsLabel(rs){
+
+    if(rs > 2){
+        return "LEADER";
+    }
+
+    if(rs > 0){
+        return "STRONG";
+    }
+
+    if(rs > -2){
+        return "WEAK";
+    }
+
+    return "LAGGARD";
+}
+
+function getGrade(expansion, rs, volume){
 
     if(
-        expansion>120 &&
-        rs>2 &&
-        volume>1.5
+        expansion >= 120 &&
+        rs >= 2 &&
+        volume >= 1.5
     ){
         return "S";
     }
 
     if(
-        expansion>100 &&
-        rs>1 &&
-        volume>1.2
+        expansion >= 100 &&
+        rs >= 1 &&
+        volume >= 1.2
     ){
         return "A";
     }
 
     if(
-        expansion>80 &&
-        rs>0
+        expansion >= 80 &&
+        rs >= 0
     ){
         return "B";
     }
 
     return "C";
-
 }
 
-function render(rows){
+function render(rows, benchmark){
 
     let html = `
 
@@ -285,8 +304,15 @@ function render(rows){
 <tr>
 <th>Symbol</th>
 <th>Price</th>
+<th>High</th>
+<th>Low</th>
+<th>Range</th>
+<th>ADR20</th>
 <th>Expansion%</th>
-<th>RS vs SPY</th>
+<th>Stock Ret%</th>
+<th>${benchmark} Ret%</th>
+<th>RS</th>
+<th>RS Label</th>
 <th>Vol Factor</th>
 <th>Grade</th>
 </tr>
@@ -295,24 +321,24 @@ function render(rows){
 
     rows.forEach(r=>{
 
+        const labelClass = r.label.toLowerCase();
+
         html += `
 
 <tr>
-
 <td>${r.symbol}</td>
-
 <td>$${r.price}</td>
-
+<td>$${r.high}</td>
+<td>$${r.low}</td>
+<td>${r.range}</td>
+<td>${r.adr}</td>
 <td>${r.expansion}%</td>
-
+<td>${r.stockReturn}%</td>
+<td>${r.benchmarkReturn}%</td>
 <td>${r.rs}%</td>
-
+<td class="${labelClass}">${r.label}</td>
 <td>${r.volume}x</td>
-
-<td class="${r.grade.toLowerCase()}">
-${r.grade}
-</td>
-
+<td class="${r.grade.toLowerCase()}">${r.grade}</td>
 </tr>
 
 `;
@@ -321,58 +347,49 @@ ${r.grade}
 
     html += "</table>";
 
-    document
-    .getElementById("results")
-    .innerHTML = html;
-
+    document.getElementById("results").innerHTML = html;
 }
 
 async function runScan(){
 
-    document
-    .getElementById("log")
-    .innerHTML = "";
+    document.getElementById("log").innerHTML = "";
+    document.getElementById("results").innerHTML = "Running scan...";
+
+    const benchmark = document.getElementById("benchmark").value.trim().toUpperCase();
+
+    writeLog("Loading benchmark: " + benchmark);
+
+    let benchmarkBars;
+
+    try{
+        benchmarkBars = await getBars(benchmark);
+    }
+    catch(err){
+        writeLog(benchmark + " ERROR -> " + err.message);
+        document.getElementById("results").innerHTML = "Benchmark failed. Check API key or endpoint access.";
+        return;
+    }
+
+    const benchmarkLatest = benchmarkBars[benchmarkBars.length - 1];
+    const benchmarkPrev = benchmarkBars[benchmarkBars.length - 2];
+
+    const benchmarkReturn =
+        ((benchmarkLatest.c - benchmarkPrev.c) / benchmarkPrev.c) * 100;
 
     writeLog(
-        "Loading SPY benchmark..."
+        benchmark +
+        " return used for RS: " +
+        benchmarkReturn.toFixed(2) +
+        "%"
     );
 
-    const spyBars =
-    await getBars("SPY");
-
-    const spyLatest =
-    spyBars[spyBars.length-1];
-
-    const spyPrev =
-    spyBars[spyBars.length-2];
-
-    const spyReturn =
-
-    (
-        (
-            spyLatest.c -
-            spyPrev.c
-        )
-
-        /
-
-        spyPrev.c
-
-    ) * 100;
-
-    const symbols =
-
-    document
-    .getElementById("symbols")
-    .value
-
-    .split(",")
-
-    .map(
-        x=>x.trim()
-    )
-
-    .filter(Boolean);
+    const symbols = document
+        .getElementById("symbols")
+        .value
+        .split(",")
+        .map(x=>x.trim().toUpperCase())
+        .filter(Boolean)
+        .filter(x=>x !== benchmark);
 
     let results = [];
 
@@ -380,131 +397,115 @@ async function runScan(){
 
         try{
 
-            writeLog(
-                "Scanning " + symbol
-            );
+            writeLog("Scanning " + symbol);
 
-            const bars =
-            await getBars(symbol);
+            const bars = await getBars(symbol);
 
-            if(
-                bars.length<21
-            ){
+            if(bars.length < 21){
+                writeLog(symbol + " skipped: less than 21 bars");
                 continue;
             }
 
-            const latest =
-            bars[bars.length-1];
+            const latest = bars[bars.length - 1];
+            const prev = bars[bars.length - 2];
 
-            const prev =
-            bars[bars.length-2];
+            const adr = calcADR20(bars);
+            const avgVol = calcAvgVol20(bars);
 
-            const adr =
-            adr20(bars);
+            const range = latest.h - latest.l;
 
-            const avgVol =
-            avgVol20(bars);
-
-            const expansion =
-
-            (
-                (
-                    latest.h -
-                    latest.l
-                )
-
-                /
-
-                adr
-
-            ) * 100;
+            const expansion = (range / adr) * 100;
 
             const stockReturn =
+                ((latest.c - prev.c) / prev.c) * 100;
 
-            (
-                (
-                    latest.c -
-                    prev.c
-                )
+            const rs = stockReturn - benchmarkReturn;
 
-                /
+            const volumeFactor = latest.v / avgVol;
 
-                prev.c
+            const label = rsLabel(rs);
 
-            ) * 100;
-
-            const rs =
-            stockReturn -
-            spyReturn;
-
-            const volFactor =
-            latest.v /
-            avgVol;
-
-            const rank =
-            grade(
+            const grade = getGrade(
                 expansion,
                 rs,
-                volFactor
+                volumeFactor
             );
 
             results.push({
 
                 symbol,
 
-                price:
-                latest.c.toFixed(2),
+                price: fmt(latest.c,2),
 
-                expansion:
-                expansion.toFixed(1),
+                high: fmt(latest.h,2),
 
-                rs:
-                rs.toFixed(2),
+                low: fmt(latest.l,2),
 
-                volume:
-                volFactor.toFixed(2),
+                range: fmt(range,2),
 
-                grade:
-                rank
+                adr: fmt(adr,2),
+
+                expansion: fmt(expansion,1),
+
+                stockReturn: fmt(stockReturn,2),
+
+                benchmarkReturn: fmt(benchmarkReturn,2),
+
+                rs: fmt(rs,2),
+
+                label,
+
+                volume: fmt(volumeFactor,2),
+
+                grade
 
             });
+
+            writeLog(
+                symbol +
+                " | Ret: " +
+                stockReturn.toFixed(2) +
+                "% | RS: " +
+                rs.toFixed(2) +
+                "% | Expansion: " +
+                expansion.toFixed(1) +
+                "%"
+            );
 
         }
 
         catch(err){
 
-            writeLog(
-
-                symbol +
-
-                " ERROR -> " +
-
-                err.message
-
-            );
+            writeLog(symbol + " ERROR -> " + err.message);
 
         }
 
     }
 
-    results.sort(
+    results.sort((a,b)=>{
 
-        (a,b)=>
+        const gradeRank = {
+            S:4,
+            A:3,
+            B:2,
+            C:1
+        };
 
-        parseFloat(b.rs)
+        const g =
+            gradeRank[b.grade] -
+            gradeRank[a.grade];
 
-        -
+        if(g !== 0){
+            return g;
+        }
 
-        parseFloat(a.rs)
+        return parseFloat(b.rs) - parseFloat(a.rs);
 
-    );
+    });
 
-    render(results);
+    render(results, benchmark);
 
-    writeLog(
-        "Scan complete."
-    );
-
+    writeLog("Scan complete.");
 }
 
 </script>
