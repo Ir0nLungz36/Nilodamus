@@ -125,6 +125,7 @@ function readSnapshot(item) {
     item.day?.close ??
     item.min?.c ??
     item.prevDay?.c ??
+    item.previousClose ??
     0;
 
   const prevClose =
@@ -143,20 +144,29 @@ function readSnapshot(item) {
   }
 
   const high =
-    item.day?.h ??
     item.session?.high ??
+    item.day?.h ??
+    item.day?.high ??
     item.min?.h ??
     0;
 
   const low =
-    item.day?.l ??
     item.session?.low ??
+    item.day?.l ??
+    item.day?.low ??
     item.min?.l ??
     0;
 
+  const open =
+    item.session?.open ??
+    item.day?.o ??
+    item.day?.open ??
+    0;
+
   const volume =
-    item.day?.v ??
     item.session?.volume ??
+    item.day?.v ??
+    item.day?.volume ??
     item.min?.v ??
     0;
 
@@ -167,6 +177,7 @@ function readSnapshot(item) {
     changePercent,
     high,
     low,
+    open,
     volume
   };
 }
@@ -180,7 +191,7 @@ function todayISO() {
   return new Date().toISOString().slice(0,10);
 }
 
-async function tryGetAdr20(symbol) {
+async function tryGetDailyBars(symbol) {
   const from = dateNDaysAgo(90);
   const to = todayISO();
 
@@ -190,14 +201,23 @@ async function tryGetAdr20(symbol) {
   const data = await massive(url);
 
   if (!data.results || data.results.length < 20) {
-    throw new Error(`${symbol} ADR bars unavailable.`);
+    throw new Error(`${symbol} daily bars unavailable.`);
   }
 
-  const recent = data.results.slice(-20);
-  const ranges = recent.map(b => ((b.h - b.l) / b.c) * 100);
-  const adr = ranges.reduce((a,b) => a + b, 0) / ranges.length;
+  return data.results.map(b => ({
+    open: b.o,
+    high: b.h,
+    low: b.l,
+    close: b.c,
+    volume: b.v,
+    time: b.t
+  }));
+}
 
-  return adr;
+function calculateAdr20FromBars(bars) {
+  const recent = bars.slice(-20);
+  const ranges = recent.map(b => ((b.high - b.low) / b.close) * 100);
+  return ranges.reduce((a,b) => a + b, 0) / ranges.length;
 }
 
 function scoreADR(adr) {
@@ -256,7 +276,7 @@ function formatLarge(num) {
 async function run(symbol, benchmark, manualAdr) {
   try {
     setError("");
-    setStatus(`Loading ${symbol} + ${benchmark} snapshot...`);
+    setStatus(`Loading ${symbol} + ${benchmark} live snapshot...`);
 
     const snapshots = await getUnifiedSnapshot(symbol, benchmark);
     const parsed = snapshots.map(readSnapshot);
@@ -269,29 +289,38 @@ async function run(symbol, benchmark, manualAdr) {
 
     let adrSource = "Massive Stock Aggregates";
     let adr = 0;
+    let bars = null;
     let adrWarning = "";
 
     try {
-      adr = await tryGetAdr20(symbol);
+      bars = await tryGetDailyBars(symbol);
+      adr = calculateAdr20FromBars(bars);
     } catch (e) {
       adrSource = "Manual ADR20";
       adr = parseFloat(manualAdr || 0);
 
       if (!adr) {
         throw new Error(
-          `ADR20 unavailable from Massive stock aggregates. Your plan likely lacks stock aggregate access. Enter Manual ADR20 to continue.\n\nOriginal error:\n${e.message}`
+          `ADR20 unavailable from Massive stock aggregates. Enter Manual ADR20 to continue.\n\nOriginal error:\n${e.message}`
         );
       }
 
-      adrWarning = "Massive blocked stock aggregate bars, so manual ADR20 was used.";
+      adrWarning = "Massive blocked daily stock bars, so manual ADR20 was used.";
     }
 
-    const todayRange = stock.price && stock.high && stock.low
-      ? ((stock.high - stock.low) / stock.price) * 100
+    const fallbackLastBar = bars ? bars[bars.length - 1] : null;
+
+    const liveHigh = stock.high || fallbackLastBar?.high || 0;
+    const liveLow = stock.low || fallbackLastBar?.low || 0;
+    const livePrice = stock.price || fallbackLastBar?.close || 0;
+    const liveOpen = stock.open || fallbackLastBar?.open || 0;
+
+    const todayRange = livePrice && liveHigh && liveLow
+      ? ((liveHigh - liveLow) / livePrice) * 100
       : 0;
 
     const expansionUsed = adr ? (todayRange / adr) * 100 : 0;
-    const dollarVol = stock.price * stock.volume;
+    const dollarVol = livePrice * stock.volume;
 
     const adrScore = scoreADR(adr);
     const expansionRoomScore = scoreExpansionUsed(expansionUsed);
@@ -341,9 +370,10 @@ async function run(symbol, benchmark, manualAdr) {
     document.getElementById("metrics").innerHTML = `
       <div class="card">
         <h2>Price / Range</h2>
-        <p>Current: $${stock.price.toFixed(2)}</p>
+        <p>Current: $${livePrice.toFixed(2)}</p>
+        <p>Open: $${liveOpen.toFixed(2)}</p>
         <p>Prev Close: $${stock.prevClose.toFixed(2)}</p>
-        <p>High / Low: $${stock.high.toFixed(2)} / $${stock.low.toFixed(2)}</p>
+        <p>High / Low: $${liveHigh.toFixed(2)} / $${liveLow.toFixed(2)}</p>
         <p>Day Change: <span class="${stock.changePercent >= 0 ? "good" : "bad"}">${stock.changePercent.toFixed(2)}%</span></p>
       </div>
 
